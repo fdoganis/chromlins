@@ -57,17 +57,19 @@ export async function openTweakPanel(render: RenderingManager, world: World, aud
   sfx.add(cue, 'sfx', CUES);
   sfx.add({ 'play sfx': () => audio.playSFX(cue.sfx) }, 'play sfx');
 
-  const mane = gui.addFolder('mane');
-  mane.add(maneKnobs, 'follow', 0, 1, 0.01);
-  mane.add(maneKnobs, 'relax', 0, 0.5, 0.01);
-  mane.add(maneKnobs, 'lag', 0, 0.6, 0.01);
-  mane.add(maneKnobs, 'grav', 0, 0.2, 0.005);
+  const mane = gui.addFolder('mane (spring)');
+  mane.add(maneKnobs, 'stiff', 10, 300, 5);
+  mane.add(maneKnobs, 'damp', 1, 30, 0.5);
+  mane.add(maneKnobs, 'kick', 0, 4, 0.05);
   mane.add(maneKnobs, 'idle', 0, 0.2, 0.005);
-  mane.add(maneKnobs, 'segs', 3, 8, 1).onFinishChange(respawn);
-  mane.add(maneKnobs, 'segLen', 0.01, 0.05, 0.001).onFinishChange(respawn);
-  mane.add(maneKnobs, 'taper', 0, 1, 0.02).onFinishChange(respawn);
+  for (const key of ['backPitch', 'frontPitch', 'yawSplay', 'rollSplay'] as const)
+    mane.add(maneKnobs, key, -1, 1, 0.02).onFinishChange(respawn);
+  mane.add(maneKnobs, 'backCount', 0, 9, 1).onFinishChange(respawn);
+  mane.add(maneKnobs, 'frontCount', 0, 9, 1).onFinishChange(respawn);
   mane.add(maneKnobs, 'rootY', -0.05, 0.05, 0.002).onFinishChange(respawn);
   mane.add(maneKnobs, 'rootZ', -0.06, 0.02, 0.002).onFinishChange(respawn);
+  mane.add(maneKnobs, 'frontRootYFrac', 0.4, 1, 0.02).onFinishChange(respawn);
+  mane.add(maneKnobs, 'frontRootZ', 0, 0.06, 0.002).onFinishChange(respawn);
 
   const horn = gui.addFolder('horn');
   horn.add(hornKnobs, 'turns', 0, 6, 0.1).onFinishChange(rebuildHorn);

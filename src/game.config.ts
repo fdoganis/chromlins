@@ -34,3 +34,11 @@ export const VOXEL_SHADING: 'phong' | 'matcap' | 'env' = 'phong';
 //   'roundedbox' — RoundedBoxGeometry: blocky silhouette + gappy scanline look,
 //                  but the rounded edges catch a raking key for per-voxel contour
 export const VOXEL_SHAPE: 'box' | 'octa' | 'sphere' | 'roundedbox' = 'box';
+
+// Unicorn mane simulation:
+//   'spring' — 14 short tube strands (7 back off the crown + 7 front forelock
+//              above the eyes), each on a cheap damped angular spring kicked by
+//              the body's rise/sink. Smaller, the default.
+//   'chain'  — 7 follow-the-leader chains of tapered cone segments (gravity +
+//              inertia rope). Nicer secondary motion, more code; a fork opts in.
+export const MANE_SIM: 'spring' | 'chain' = 'spring';
