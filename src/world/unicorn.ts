@@ -20,7 +20,8 @@ const MANE = RAINBOW; // strand colors, full ROYGBIV
 // when the strands are built, so they take effect on the next unicorn spawn.
 export const maneKnobs = {
   backCount: 7, frontCount: 7,
-  radius: 0.006,
+  radius: 0.006,                           // tube radius at the root
+  taper: 0.85,                             // tip radius = radius * (1 - taper); 1 = a needle point
   rootY: 0.006, rootZ: -0.012,             // back-mane root, just behind the horn
   frontRootYFrac: 0.72, frontRootZ: 0.03,  // forelock root, on the forehead above the eyes
   backPitch: -0.1,                         // rest pitch of the back strands (rad)
@@ -97,8 +98,45 @@ const FRONT_CURVE = new CatmullRomCurve3([
   new Vector3(0, 0.03, 0.045),
   new Vector3(0, 0.024, 0.062),
 ]);
-const tubeBack = MANE_SIM === 'chain' ? null : new TubeGeometry(BACK_CURVE, 12, maneKnobs.radius, 4, false);
-const tubeFront = MANE_SIM === 'chain' ? null : new TubeGeometry(FRONT_CURVE, 12, maneKnobs.radius, 4, false);
+const MANE_TUB_SEG = 10; // rings along a strand
+const MANE_RAD_SEG = 5;  // sides of the tube
+
+// THREE.TubeGeometry has a single constant radius. This runs its sweep, then
+// (once) pulls every ring's vertices toward that ring's centre on the curve by
+// `1 - taper·u` — a real per-vertex taper (taper = 1 → an actual point), not a
+// scaled-mesh illusion. One-time; the spring strands are rigid, only the mesh
+// rotates.
+function taperedTube(curve: CatmullRomCurve3, tubSeg: number, radSeg: number, rootR: number, taper: number): TubeGeometry {
+  const g = new TubeGeometry(curve, tubSeg, rootR, radSeg, false);
+  const p = g.attributes.position;
+  const c = new Vector3();
+  for (let i = 0; i <= tubSeg; i++) {
+    curve.getPointAt(i / tubSeg, c);
+    const f = 1 - taper * (i / tubSeg);
+    for (let j = 0; j <= radSeg; j++) {
+      const vi = (radSeg + 1) * i + j;
+      p.setXYZ(vi, c.x + (p.getX(vi) - c.x) * f, c.y + (p.getY(vi) - c.y) * f, c.z + (p.getZ(vi) - c.z) * f);
+    }
+  }
+  p.needsUpdate = true;
+  return g;
+}
+
+let tubeBack: TubeGeometry | null = null;
+let tubeFront: TubeGeometry | null = null;
+function buildManeTubes(): void {
+  tubeBack?.dispose();
+  tubeFront?.dispose();
+  tubeBack = MANE_SIM === 'chain' ? null : taperedTube(BACK_CURVE, MANE_TUB_SEG, MANE_RAD_SEG, maneKnobs.radius, maneKnobs.taper);
+  tubeFront = MANE_SIM === 'chain' ? null : taperedTube(FRONT_CURVE, MANE_TUB_SEG, MANE_RAD_SEG, maneKnobs.radius, maneKnobs.taper);
+}
+buildManeTubes();
+
+// ?tweak only: rebuild the mane tubes after a radius/taper change.
+export function rebuildManeGeo(): void {
+  if (!__DEV__) return;
+  buildManeTubes();
+}
 
 type Spring = { mesh: Object3D; baseX: number; phase: number; ang: number; vel: number };
 

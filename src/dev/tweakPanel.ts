@@ -14,7 +14,7 @@
 import type { RenderingManager } from '../rendering/RenderingManager';
 import type { World } from '../world/World';
 import type { AudioManager } from '../audio/AudioManager';
-import { maneKnobs, hornKnobs, uniFaceKnobs, rebuildHornGeo } from '../world/unicorn';
+import { maneKnobs, hornKnobs, uniFaceKnobs, rebuildHornGeo, rebuildManeGeo } from '../world/unicorn';
 import { ghostEyeKnobs } from '../world/ghostEyes';
 import { textKnobs } from '../text/engines/voxel/VoxelTextEngine';
 import { RAINBOW } from '../core/palette';
@@ -30,6 +30,7 @@ export async function openTweakPanel(render: RenderingManager, world: World, aud
   const gui = new GUI({ title: 'gamma ?tweak' });
   const respawn = () => world.respawnActors();
   const rebuildHorn = () => { rebuildHornGeo(); respawn(); };
+  const rebuildMane = () => { rebuildManeGeo(); respawn(); };
 
   // --- scene: orbit the camera, freeze the clock, force a body up -------------
   const scene = gui.addFolder('scene');
@@ -64,6 +65,8 @@ export async function openTweakPanel(render: RenderingManager, world: World, aud
   mane.add(maneKnobs, 'idle', 0, 0.2, 0.005);
   for (const key of ['backPitch', 'frontPitch', 'yawSplay', 'rollSplay'] as const)
     mane.add(maneKnobs, key, -1, 1, 0.02).onFinishChange(respawn);
+  mane.add(maneKnobs, 'radius', 0.002, 0.016, 0.001).onFinishChange(rebuildMane);
+  mane.add(maneKnobs, 'taper', 0, 1, 0.02).onFinishChange(rebuildMane);
   mane.add(maneKnobs, 'backCount', 0, 9, 1).onFinishChange(respawn);
   mane.add(maneKnobs, 'frontCount', 0, 9, 1).onFinishChange(respawn);
   mane.add(maneKnobs, 'rootY', -0.05, 0.05, 0.002).onFinishChange(respawn);
