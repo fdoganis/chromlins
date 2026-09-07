@@ -3,7 +3,7 @@ import { State } from '../core/State';
 import type { ITransition } from '../core/StateMachine';
 import type { RenderingManager } from '../rendering/RenderingManager';
 import { SelectCommand } from '../commands/SelectCommand';
-import { RunState } from './RunState';
+import { IntroState } from './IntroState';
 
 const FLOOR_DIST_m = 0.6; // where the board lands when placed on the floor
 const DEV_SKIP_S = 8;     // dev/test only: no reticle ever → floor-place and go
@@ -74,7 +74,7 @@ export class AnchorState extends State {
 
   #advance() {
     this.#done = true;
-    this.#sm.change(RunState);
+    this.#sm.change(IntroState); // the opening cinematic, then RunState
   }
 
   override update(delta: number, frame?: XRFrame) {

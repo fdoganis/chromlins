@@ -4,7 +4,7 @@
 // the ring's identity, and a full-colour **fill** arc sweeps thetaLength = π·fill
 // over it (fill = count / N for the level). All seven full = round won.
 import { Mesh, MeshBasicMaterial, TorusGeometry, Color } from 'three';
-import type { Object3D } from 'three';
+import type { Object3D, Vector3 } from 'three';
 import { RAINBOW } from '../core/palette';
 
 const ARCS = RAINBOW.length;
@@ -72,6 +72,12 @@ export class Rainbow {
 
   reset(): void {
     for (let i = 0; i < ARCS; i++) this.setFill(i, 0);
+  }
+
+  // World position of arc i's apex (top of the half-circle) — the intro cinematic
+  // fires the "color stolen" burst from there.
+  arcApex(i: number, out: Vector3): Vector3 {
+    return this.#root.localToWorld(out.set(0, Y_OFF_m + this.#radii[i], Z_OFF_m));
   }
 
   dispose(): void {

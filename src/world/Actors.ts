@@ -25,7 +25,9 @@ export type ActorHit = { id: number; tag: number; decoy: boolean; position: Vect
 
 const BODY_R_m = 0.045;
 const BODY_LEN_m = 0.11;                              // capsule mid-section
-const BODY_HALF_m = BODY_R_m + BODY_LEN_m / 2;        // 0.10 — half the total height
+export const BODY_HALF_m = BODY_R_m + BODY_LEN_m / 2; // 0.10 — half the total height
+// one shared body geometry — every actor, and the intro cinematic's stand-ins
+export const CAPSULE_GEO = new CapsuleGeometry(BODY_R_m, BODY_LEN_m, 4, 12); // a rounded "ghost"
 const HIDDEN_Y_m = -0.17; // center: the whole body is below the rim, inside the pit
 const PEEK_Y_m = -0.01;   // center: ~half the body clears the rim — it stays rooted in the hole
 const RISE_S = 0.25;
@@ -52,7 +54,7 @@ export class Actors {
   #nextId = 0;
   #raycaster = new Raycaster();
 
-  #geo = new CapsuleGeometry(BODY_R_m, BODY_LEN_m, 4, 12); // every body — a rounded "ghost"
+  #geo = CAPSULE_GEO; // every body — a rounded "ghost"
 
   constructor(root: Object3D, camera: PerspectiveCamera) {
     this.#root = root;

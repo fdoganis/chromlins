@@ -78,8 +78,9 @@ export class Game {
     const debugL13 = __DEV__ && 'l13' in q;     // jump straight into the level 13 run
     const debugCalib = __DEV__ && 'calib' in q; // hand-whack calibration (CalibState)
     const debugTweak = __DEV__ && 'tweak' in q; // live-tune panel, over a ?run-style round
+    const debugIntro = __DEV__ && 'intro' in q; // watch the opening cinematic on desktop
 
-    sm.register(IntroState, new IntroState(sm, this.#text, this.#render.hudAnchor, score, level));
+    sm.register(IntroState, new IntroState(sm, this.#world, this.#audio, this.#render, score, level));
     sm.register(AnchorState, new AnchorState(this.#render, sm));
     sm.register(RunState, new RunState(this.#world, this.#audio, this.#haptics, sm, this.#text, this.#render, score, level));
     sm.register(WinState, new WinState(sm, this.#text, this.#render.hudAnchor, score, level, this.#hiScore, RunState, this.#audio));
@@ -87,7 +88,7 @@ export class Game {
     sm.register(NameEntryState, new NameEntryState(sm, this.#world, this.#text, this.#render, score, level, this.#hiScore, RunState));
     if (__DEV__) sm.register(CalibState, new CalibState(sm, this.#world, this.#text, this.#render));
 
-    if (debugRun || debugName || debugL13 || debugCalib || debugTweak) {
+    if (debugRun || debugName || debugL13 || debugCalib || debugTweak || debugIntro) {
       this.#render.anchor.position.set(0, 0, -0.6);
       this.#render.camera.position.set(0, 0.6, 0.4);
       this.#render.camera.lookAt(0, 0, -0.6);
@@ -96,8 +97,9 @@ export class Game {
     sm.start(
       debugCalib ? CalibState : // its own hand-on-surface placement step
       debugName ? NameEntryState :
+      debugIntro ? IntroState :
       debugRun || debugL13 || debugTweak ? RunState :
-      IntroState,
+      AnchorState, // place the board, then IntroState (cinematic), then RunState
     );
     if (__DEV__ && debugTweak) import('../dev/tweakPanel').then((m) => m.openTweakPanel(this.#render, this.#world, this.#audio));
     return sm;
