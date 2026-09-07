@@ -35,6 +35,15 @@ export const VOXEL_SHADING: 'phong' | 'matcap' | 'env' = 'phong';
 //                  but the rounded edges catch a raking key for per-voxel contour
 export const VOXEL_SHAPE: 'box' | 'octa' | 'sphere' | 'roundedbox' = 'box';
 
+// Opening cinematic (IntroState):
+//   'none' — IntroState just resets the run and hands straight to RunState after
+//            the board is placed. The whole wordless sequence, its Timeline, and
+//            the cinematic-only helpers tree-shake out. The default.
+//   'full' — the "director's cut": rainbow draws in, a unicorn bobs at the crown,
+//            seven spirits rise and steal the colours one by one, the unicorn
+//            drops into the last hole. Watch it on desktop with ?intro.
+export const CINEMATIC: 'none' | 'full' = 'none';
+
 // Unicorn mane simulation:
 //   'spring' — 14 short tube strands (7 back off the crown + 7 front forelock
 //              above the eyes), each on a cheap damped angular spring kicked by
