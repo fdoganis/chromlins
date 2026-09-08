@@ -11,6 +11,7 @@
 // Re-choreographs existing parts: Rainbow, Sparkles (explode + converge), the
 // Chromlin / Unicorn rigs (its own instances), Timeline.
 import { Color, Vector3, MathUtils } from 'three';
+import type { Object3D } from 'three';
 import type { Game } from '../core/Game';
 import type { World } from '../world/World';
 import type { AudioManager } from '../audio/AudioManager';
@@ -48,6 +49,7 @@ export class Cinematic {
   #world: World;
   #audio: AudioManager;
   #render: RenderingManager;
+  #anchor: Object3D;
   #onDone: () => void;
 
   #uni: Unicorn;
@@ -60,9 +62,10 @@ export class Cinematic {
     this.#world = ctx.world;
     this.#audio = ctx.audio;
     this.#render = ctx.rendering;
+    this.#anchor = ctx.rendering.anchor;
     this.#onDone = onDone;
 
-    const anchor = ctx.rendering.anchor;
+    const anchor = this.#anchor;
     this.#uni = new Unicorn(anchor);
     this.#uni.recolor(CREAM);
     for (let i = 0; i < ARCS; i++) {
@@ -74,6 +77,16 @@ export class Cinematic {
   #hide(): void {
     this.#uni.mesh.visible = false;
     for (const e of this.#eyes) e.c.mesh.visible = false;
+  }
+
+  // mirrors Gameboard's two-cross layout + Rainbow's arc geometry — kept local so
+  // they leave with the cinematic in a `light` build.
+  #holeLocal(i: number, out: Vector3): Vector3 {
+    const a = i & 3;
+    return out.set((i < 4 ? -0.28 : 0.28) + (a === 0 ? -0.13 : a === 1 ? 0.13 : 0), 0, a === 2 ? -0.13 : a === 3 ? 0.13 : 0);
+  }
+  #arcApex(i: number, out: Vector3): Vector3 {
+    return this.#anchor.localToWorld(out.set(0, 0.53 + (6 - i) * 0.022, -0.35)); // 0.53 = Rainbow Y_OFF + INNER_R
   }
 
   #chirp(id: string): void {
@@ -89,7 +102,7 @@ export class Cinematic {
       const t0 = STEAL_START_S + i * STEAL_STEP_S;
       const e = this.#eyes[i];
       b.push({ at: t0, fn: () => { e.c.mesh.visible = true; e.c.mesh.material.visible = false; e.riseAt = this.#tl!.time; this.#chirp('spawn'); } });
-      b.push({ at: t0 + 0.22, fn: () => this.#world.burstSparkles(this.#world.rainbowArcApex(i, _v), e.col, 'explode') });
+      b.push({ at: t0 + 0.22, fn: () => this.#world.burstSparkles(this.#arcApex(i, _v), e.col, 'explode') });
       b.push({ at: t0 + 0.42, fn: () => { this.#world.burstSparkles(e.c.mesh.getWorldPosition(_v), e.col, 'converge'); this.#chirp('unicorn'); } });
       b.push({ at: t0 + 0.52, fn: () => { this.#world.setRainbowFill(i, 0); e.c.mesh.material.visible = true; e.c.recolor(`#${e.col.getHexString()}`); e.capAt = this.#tl!.time; } });
     }
@@ -111,7 +124,7 @@ export class Cinematic {
       e.c.mesh.visible = false;
       e.c.mesh.material.visible = true;
       e.c.mesh.material.emissive.setScalar(0);
-      this.#world.holePoint(i, _v);
+      this.#holeLocal(i, _v);
       e.c.mesh.position.set(_v.x, HIDDEN_Y_m, _v.z);
       e.riseAt = Infinity;
       e.capAt = Infinity;
@@ -136,7 +149,7 @@ export class Cinematic {
       this.#uni.mesh.position.set(0, CROWN_Y_m + Math.sin(t * 5) * 0.03, CROWN_Z_m);
     } else {
       const k = MathUtils.clamp((t - this.#outroAt) / DROP_S, 0, 1);
-      this.#world.holePoint(ARCS, _v); // the 8th hole
+      this.#holeLocal(ARCS, _v); // the 8th hole
       this.#uni.mesh.position.set(
         MathUtils.lerp(0, _v.x, k),
         MathUtils.lerp(CROWN_Y_m, HIDDEN_Y_m, k * k),

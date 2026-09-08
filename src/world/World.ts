@@ -32,14 +32,11 @@ export class World {
   }
 
   get holeCount(): number { return this.#board.holeCount; }
-  // anchor-local (x, 0, z) of hole i — the intro cinematic rises its eye rigs from these
-  holePoint(i: number, out: Vector3): Vector3 { const h = this.#board.holeAt(i); return out.set(h.x, 0, h.z); }
   get activeCount(): number { return this.#actors.count; }
   freeHoles(): number[] { return this.#board.freeHoles(); }
   activeTags(): number[] { return this.#actors.activeTags(); }
 
   setRainbowFill(i: number, fill: number): void { this.#rainbow.setFill(i, fill); }
-  rainbowArcApex(i: number, out: Vector3): Vector3 { return this.#rainbow.arcApex(i, out); }
 
   // Raise a body of `colorHex` from `hole`, up for `hold` seconds, carrying `tag`.
   // `decoy` gives it the unicorn's pink horn and makes a tap non-destructive.

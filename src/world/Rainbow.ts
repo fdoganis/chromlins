@@ -74,11 +74,6 @@ export class Rainbow {
     for (let i = 0; i < ARCS; i++) this.setFill(i, 0);
   }
 
-  // World position of arc i's apex (top of the half-circle) — the intro cinematic
-  // fires the "color stolen" burst from there.
-  arcApex(i: number, out: Vector3): Vector3 {
-    return this.#root.localToWorld(out.set(0, Y_OFF_m + this.#radii[i], Z_OFF_m));
-  }
 
   dispose(): void {
     for (const arc of [...this.#tracks, ...this.#fills]) {
