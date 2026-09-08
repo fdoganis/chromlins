@@ -12,8 +12,8 @@
 // need a respawn, wired to onFinishChange. "copy JSON" dumps the current values
 // so a good set can be pasted back into the source defaults.
 import type { Game } from '../core/Game';
-import { maneKnobs, hornKnobs, uniFaceKnobs, rebuildHornGeo, rebuildManeGeo } from '../world/unicorn';
-import { ghostEyeKnobs } from '../world/ghostEyes';
+import { Unicorn } from '../world/Unicorn';
+import { Chromlin } from '../world/Chromlin';
 import { textKnobs } from '../text/engines/voxel/VoxelTextEngine';
 import { RAINBOW } from '../core/palette';
 import { devFlags } from './flags';
@@ -28,8 +28,8 @@ export async function openTweakPanel(ctx: Game): Promise<void> {
   const { default: GUI } = await import('lil-gui');
   const gui = new GUI({ title: 'gamma ?tweak' });
   const respawn = () => world.respawnActors();
-  const rebuildHorn = () => { rebuildHornGeo(); respawn(); };
-  const rebuildMane = () => { rebuildManeGeo(); respawn(); };
+  const rebuildHorn = () => { Unicorn.rebuildGeo(); respawn(); };
+  const rebuildMane = () => { Unicorn.rebuildGeo(); respawn(); };
 
   // --- scene: orbit the camera, freeze the clock, force a body up -------------
   const scene = gui.addFolder('scene');
@@ -58,42 +58,42 @@ export async function openTweakPanel(ctx: Game): Promise<void> {
   sfx.add({ 'play sfx': () => audio.playSFX(cue.sfx) }, 'play sfx');
 
   const mane = gui.addFolder('mane (spring)');
-  mane.add(maneKnobs, 'stiff', 10, 300, 5);
-  mane.add(maneKnobs, 'damp', 1, 30, 0.5);
-  mane.add(maneKnobs, 'kick', 0, 4, 0.05);
-  mane.add(maneKnobs, 'idle', 0, 0.2, 0.005);
+  mane.add(Unicorn.tune.mane, 'stiff', 10, 300, 5);
+  mane.add(Unicorn.tune.mane, 'damp', 1, 30, 0.5);
+  mane.add(Unicorn.tune.mane, 'kick', 0, 4, 0.05);
+  mane.add(Unicorn.tune.mane, 'idle', 0, 0.2, 0.005);
   for (const key of ['backPitch', 'frontPitch', 'yawSplay', 'rollSplay'] as const)
-    mane.add(maneKnobs, key, -1, 1, 0.02).onFinishChange(respawn);
-  mane.add(maneKnobs, 'radius', 0.002, 0.016, 0.001).onFinishChange(rebuildMane);
-  mane.add(maneKnobs, 'taper', 0, 1, 0.02).onFinishChange(rebuildMane);
-  mane.add(maneKnobs, 'backCount', 0, 9, 1).onFinishChange(respawn);
-  mane.add(maneKnobs, 'frontCount', 0, 9, 1).onFinishChange(respawn);
-  mane.add(maneKnobs, 'rootY', -0.05, 0.05, 0.002).onFinishChange(respawn);
-  mane.add(maneKnobs, 'rootZ', -0.06, 0.02, 0.002).onFinishChange(respawn);
-  mane.add(maneKnobs, 'frontRootYFrac', 0.4, 1, 0.02).onFinishChange(respawn);
-  mane.add(maneKnobs, 'frontRootZ', 0, 0.06, 0.002).onFinishChange(respawn);
+    mane.add(Unicorn.tune.mane, key, -1, 1, 0.02).onFinishChange(respawn);
+  mane.add(Unicorn.tune.mane, 'radius', 0.002, 0.016, 0.001).onFinishChange(rebuildMane);
+  mane.add(Unicorn.tune.mane, 'taper', 0, 1, 0.02).onFinishChange(rebuildMane);
+  mane.add(Unicorn.tune.mane, 'backCount', 0, 9, 1).onFinishChange(respawn);
+  mane.add(Unicorn.tune.mane, 'frontCount', 0, 9, 1).onFinishChange(respawn);
+  mane.add(Unicorn.tune.mane, 'rootY', -0.05, 0.05, 0.002).onFinishChange(respawn);
+  mane.add(Unicorn.tune.mane, 'rootZ', -0.06, 0.02, 0.002).onFinishChange(respawn);
+  mane.add(Unicorn.tune.mane, 'frontRootYFrac', 0.4, 1, 0.02).onFinishChange(respawn);
+  mane.add(Unicorn.tune.mane, 'frontRootZ', 0, 0.06, 0.002).onFinishChange(respawn);
 
   const horn = gui.addFolder('horn');
-  horn.add(hornKnobs, 'turns', 0, 6, 0.1).onFinishChange(rebuildHorn);
-  horn.add(hornKnobs, 'height', 0.03, 0.14, 0.005).onFinishChange(rebuildHorn);
-  horn.add(hornKnobs, 'baseR', 0.008, 0.04, 0.001).onFinishChange(rebuildHorn);
-  horn.add(hornKnobs, 'tiltX', -0.6, 0.8, 0.02).onFinishChange(respawn);
-  horn.add(hornKnobs, 'posY', -0.05, 0.08, 0.005).onFinishChange(respawn);
-  horn.add(hornKnobs, 'posZ', -0.03, 0.05, 0.005).onFinishChange(respawn);
+  horn.add(Unicorn.tune.horn, 'turns', 0, 6, 0.1).onFinishChange(rebuildHorn);
+  horn.add(Unicorn.tune.horn, 'height', 0.03, 0.14, 0.005).onFinishChange(rebuildHorn);
+  horn.add(Unicorn.tune.horn, 'baseR', 0.008, 0.04, 0.001).onFinishChange(rebuildHorn);
+  horn.add(Unicorn.tune.horn, 'tiltX', -0.6, 0.8, 0.02).onFinishChange(respawn);
+  horn.add(Unicorn.tune.horn, 'posY', -0.05, 0.08, 0.005).onFinishChange(respawn);
+  horn.add(Unicorn.tune.horn, 'posZ', -0.03, 0.05, 0.005).onFinishChange(respawn);
 
   const face = gui.addFolder('unicorn face');
   for (const key of ['eyeX', 'eyeYFrac', 'eyeZ', 'cheekX', 'cheekYFrac', 'cheekZ', 'cheekFlat'] as const)
-    face.add(uniFaceKnobs, key, -0.06, 0.08, 0.002).onFinishChange(respawn);
+    face.add(Unicorn.tune.face, key, -0.06, 0.08, 0.002).onFinishChange(respawn);
 
   const eyes = gui.addFolder('ghost eyes');
-  eyes.add(ghostEyeKnobs, 'yawMax', 0, 1.6, 0.05);
-  eyes.add(ghostEyeKnobs, 'range', 0, 0.02, 0.001);
-  eyes.add(ghostEyeKnobs, 'spring', 20, 300, 5);
-  eyes.add(ghostEyeKnobs, 'damp', 0.4, 0.98, 0.01);
-  eyes.add(ghostEyeKnobs, 'kick', 0, 0.1, 0.005);
-  eyes.add(ghostEyeKnobs, 'faceYFrac', 0, 1, 0.02).onFinishChange(respawn);
-  eyes.add(ghostEyeKnobs, 'whiteX', 0, 0.03, 0.001).onFinishChange(respawn);
-  eyes.add(ghostEyeKnobs, 'whiteZ', 0.02, 0.06, 0.001).onFinishChange(respawn);
+  eyes.add(Chromlin.tune, 'yawMax', 0, 1.6, 0.05);
+  eyes.add(Chromlin.tune, 'range', 0, 0.02, 0.001);
+  eyes.add(Chromlin.tune, 'spring', 20, 300, 5);
+  eyes.add(Chromlin.tune, 'damp', 0.4, 0.98, 0.01);
+  eyes.add(Chromlin.tune, 'kick', 0, 0.1, 0.005);
+  eyes.add(Chromlin.tune, 'faceYFrac', 0, 1, 0.02).onFinishChange(respawn);
+  eyes.add(Chromlin.tune, 'whiteX', 0, 0.03, 0.001).onFinishChange(respawn);
+  eyes.add(Chromlin.tune, 'whiteZ', 0.02, 0.06, 0.001).onFinishChange(respawn);
 
   const text = gui.addFolder('text');
   text.add(textKnobs, 'fill', 0.3, 1, 0.02);
@@ -125,7 +125,7 @@ export async function openTweakPanel(ctx: Game): Promise<void> {
   });
   gui.add({
     'copy JSON': () => {
-      const all: Record<string, unknown> = { maneKnobs, hornKnobs, uniFaceKnobs, ghostEyeKnobs, textKnobs };
+      const all: Record<string, unknown> = { mane: Unicorn.tune.mane, horn: Unicorn.tune.horn, face: Unicorn.tune.face, eyes: Chromlin.tune, textKnobs };
       if (lg) all.lights = {
         hemi: dumpLight(lg.hemi as unknown as Light), sun: dumpLight(lg.sun as unknown as Light),
         fore: dumpLight(lg.fore as unknown as Light), back: dumpLight(lg.back as unknown as Light),
