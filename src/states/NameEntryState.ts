@@ -13,9 +13,10 @@ import { Ray, Vector3 } from 'three';
 import { State } from '../core/State';
 import { SelectCommand } from '../commands/SelectCommand';
 import { IntroState } from './IntroState';
+import { RunState } from './RunState';
 import { RAINBOW } from '../core/palette';
 import type { ClassOf } from '../types/ClassOf';
-import type { ITransition } from '../core/StateMachine';
+import type { Ctx } from '../core/Ctx';
 import type { World } from '../world/World';
 import type { RenderingManager } from '../rendering/RenderingManager';
 import type { TextManager } from '../text/TextManager';
@@ -41,14 +42,13 @@ const _ray = new Ray();
 type Slot = { id: number; label: TextHandle; char: string; locked: boolean };
 
 export class NameEntryState extends State {
-  #sm: ITransition;
+  #sm: Ctx;
   #world: World;
   #text: TextManager;
   #render: RenderingManager;
   #score: Score;
   #level: Level;
   #hi: HiScore;
-  #run: ClassOf<State>; // RunState, injected to avoid an import cycle
 
   #slots: Slot[] = [];
   #okId = -1;
@@ -58,16 +58,15 @@ export class NameEntryState extends State {
   #exitIn = -1;               // >= 0 once OK is confirmed: seconds until we leave
   #next: ClassOf<State> = IntroState; // where the beat leads — Run (level 13) on "13K"
 
-  constructor(sm: ITransition, world: World, text: TextManager, render: RenderingManager, score: Score, level: Level, hi: HiScore, run: ClassOf<State>) {
+  constructor(ctx: Ctx) {
     super();
-    this.#sm = sm;
-    this.#world = world;
-    this.#text = text;
-    this.#render = render;
-    this.#score = score;
-    this.#level = level;
-    this.#hi = hi;
-    this.#run = run;
+    this.#sm = ctx;
+    this.#world = ctx.world;
+    this.#text = ctx.text;
+    this.#render = ctx.render;
+    this.#score = ctx.score;
+    this.#level = ctx.level;
+    this.#hi = ctx.hiScore;
     this.on(SelectCommand, this.#onSelect);
   }
 
@@ -181,7 +180,7 @@ export class NameEntryState extends State {
       try { localStorage.setItem('gamma.l13', '1'); } catch { /* not persisted */ }
       this.#text.setText(this.#prompt, '13 UNLOCKED');
       this.#level.set(13);
-      this.#next = this.#run; // straight into the L13 run after the beat
+      this.#next = RunState; // straight into the L13 run after the beat
     } else {
       this.#text.setText(this.#prompt, 'SAVED');
     }

@@ -1,6 +1,5 @@
 import { State } from '../core/State';
-import type { ITransition } from '../core/StateMachine';
-import type { ITransform } from '../types/ITransform';
+import type { Ctx } from '../core/Ctx';
 import type { TextManager } from '../text/TextManager';
 import type { TextHandle } from '../text/ITextEngine';
 import { SelectCommand } from '../commands/SelectCommand';
@@ -12,21 +11,21 @@ import type { AudioManager } from '../audio/AudioManager';
 
 
 export class GameOverState extends State {
-  #sm: ITransition;
+  #sm: Ctx;
   #text: TextManager;
   #score: Score;
   #hi: HiScore;
   #audio: AudioManager;
   #message: TextHandle;
 
-  constructor(sm: ITransition, text: TextManager, hudAnchor: ITransform, score: Score, hi: HiScore, audio: AudioManager) {
+  constructor(ctx: Ctx) {
     super();
-    this.#sm = sm;
-    this.#text = text;
-    this.#score = score;
-    this.#hi = hi;
-    this.#audio = audio;
-    this.#message = text.show('GAME OVER', hudAnchor, { color: '#ff3333', visible: false });
+    this.#sm = ctx;
+    this.#text = ctx.text;
+    this.#score = ctx.score;
+    this.#hi = ctx.hiScore;
+    this.#audio = ctx.audio;
+    this.#message = ctx.text.show('GAME OVER', ctx.render.hudAnchor, { color: '#ff3333', visible: false });
     this.#registerHandlers();
   }
 

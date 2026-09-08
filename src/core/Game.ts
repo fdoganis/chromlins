@@ -25,52 +25,56 @@ import type { TextHandle } from '../text/ITextEngine';
 import { VoxelTextEngine } from '../text/engines/voxel/VoxelTextEngine';
 import { SegmentTextEngine } from '../text/engines/segment/SegmentTextEngine';
 import { TEXT_ENGINE, CINEMATIC } from '../game.config';
+import type { Ctx } from './Ctx';
+import type { State } from './State';
+import type { ClassOf } from '../types/ClassOf';
 
-export class Game {
-  #render: RenderingManager;
+// Game is the composition root and the Ctx every State receives.
+export class Game implements Ctx {
+  readonly render: RenderingManager;
+  readonly audio: AudioManager;
+  readonly world: World;
+  readonly text: TextManager;
+  readonly haptics: Haptics;
+  readonly score = new Score();
+  readonly level = new Level();
+  readonly hiScore = new HiScore();
   #input: InputManager;
-  #audio: AudioManager;
-  #world: World;
-  #text: TextManager
   #sm: StateMachine;
-  #haptics: Haptics;
-  #score = new Score();
-  #level = new Level();
-  #hiScore = new HiScore();
   #hiLabel: TextHandle;
   #hiShown = -1;
 
+  change(state: ClassOf<State>): void { this.#sm.change(state); }
+
 
   constructor() {
-    this.#render = new RenderingManager();
-    this.#audio = new AudioManager(this.#render.camera, new SoundBoxSoundEngine()); // or: OscillatorSoundEngine / ZzfxSoundEngine
-    this.#world = new World(this.#render.anchor, this.#audio, this.#render.camera);
-    this.#haptics = new Haptics(this.#render.renderer);
-    this.#input = new InputManager(this.#render.renderer, this.#render.scene, this.#render.camera, this.#render.anchor);
+    this.render = new RenderingManager();
+    this.audio = new AudioManager(this.render.camera, new SoundBoxSoundEngine()); // or: OscillatorSoundEngine / ZzfxSoundEngine
+    this.world = new World(this.render.anchor, this.audio, this.render.camera);
+    this.haptics = new Haptics(this.render.renderer);
+    this.#input = new InputManager(this.render.renderer, this.render.scene, this.render.camera, this.render.anchor);
     // TEXT_ENGINE is a literal const — rolldown folds the compare and the
     // unpicked engine (plus, for 'segment', all the voxel glyph data) shakes out.
     const textEngine = TEXT_ENGINE === 'segment'
-      ? new SegmentTextEngine(this.#render.scene, this.#render.camera)
-      : new VoxelTextEngine(this.#render.scene, this.#render.camera);
-    this.#text = new TextManager(textEngine);
+      ? new SegmentTextEngine(this.render.scene, this.render.camera)
+      : new VoxelTextEngine(this.render.scene, this.render.camera);
+    this.text = new TextManager(textEngine);
 
     // Persistent HUD: the all-time best, shown everywhere. Game.update() ticks it
     // to max(hiScore, live score) so it climbs in real time while you beat it.
-    this.#hiLabel = this.#text.show('HI 0', this.#render.hiAnchor);
+    this.#hiLabel = this.text.show('HI 0', this.render.hiAnchor);
 
-    this.#sm = this.#buildStateMachine();
-
+    this.#sm = new StateMachine();
+    this.#buildStates();
 
     this.#bindInput();
   }
 
-  // IntroState / GameOverState
-  // NOTE: Starting in Intro means the first tap changes state instead of spawning a cone.
   // Dev: `?run` skips Intro/Placing and drops the board in front of the default
   // camera, so the running state is testable on plain desktop without WebXR.
-  #buildStateMachine(): StateMachine {
-    const sm = new StateMachine();
-    const score = this.#score, level = this.#level;
+  #buildStates(): void {
+    const sm = this.#sm;
+    const level = this.level;
 
     const q = getQuery();
     const debugRun = __DEV__ && 'run' in q;
@@ -80,18 +84,18 @@ export class Game {
     const debugTweak = __DEV__ && 'tweak' in q; // live-tune panel, over a ?run-style round
     const debugIntro = __DEV__ && CINEMATIC === 'full' && 'intro' in q; // watch the opening cinematic on desktop
 
-    sm.register(IntroState, new IntroState(sm, this.#world, this.#audio, this.#render, score, level));
-    sm.register(AnchorState, new AnchorState(this.#render, sm));
-    sm.register(RunState, new RunState(this.#world, this.#audio, this.#haptics, sm, this.#text, this.#render, score, level));
-    sm.register(WinState, new WinState(sm, this.#text, this.#render.hudAnchor, score, level, this.#hiScore, RunState, this.#audio));
-    sm.register(GameOverState, new GameOverState(sm, this.#text, this.#render.hudAnchor, score, this.#hiScore, this.#audio));
-    sm.register(NameEntryState, new NameEntryState(sm, this.#world, this.#text, this.#render, score, level, this.#hiScore, RunState));
-    if (__DEV__) sm.register(CalibState, new CalibState(sm, this.#world, this.#text, this.#render));
+    sm.register(IntroState, new IntroState(this));
+    sm.register(AnchorState, new AnchorState(this));
+    sm.register(RunState, new RunState(this));
+    sm.register(WinState, new WinState(this));
+    sm.register(GameOverState, new GameOverState(this));
+    sm.register(NameEntryState, new NameEntryState(this));
+    if (__DEV__) sm.register(CalibState, new CalibState(this));
 
     if (debugRun || debugName || debugL13 || debugCalib || debugTweak || debugIntro) {
-      this.#render.anchor.position.set(0, 0, -0.6);
-      this.#render.camera.position.set(0, 0.6, 0.4);
-      this.#render.camera.lookAt(0, 0, -0.6);
+      this.render.anchor.position.set(0, 0, -0.6);
+      this.render.camera.position.set(0, 0.6, 0.4);
+      this.render.camera.lookAt(0, 0, -0.6);
     }
     if (debugL13) level.set(13);
     sm.start(
@@ -101,8 +105,7 @@ export class Game {
       debugRun || debugL13 || debugTweak ? RunState :
       AnchorState, // place the board, then IntroState (cinematic), then RunState
     );
-    if (__DEV__ && debugTweak) import('../dev/tweakPanel').then((m) => m.openTweakPanel(this.#render, this.#world, this.#audio));
-    return sm;
+    if (__DEV__ && debugTweak) import('../dev/tweakPanel').then((m) => m.openTweakPanel(this));
   }
 
   #bindInput(): void {
@@ -125,29 +128,29 @@ export class Game {
 
   update(delta: number, frame?: XRFrame) {
     this.#sm.update(delta, frame);
-    this.#text.update(delta); // labels are global, not owned by the active state
+    this.text.update(delta); // labels are global, not owned by the active state
 
-    const hi = Math.max(this.#hiScore.score, this.#score.value);
-    if (hi !== this.#hiShown) { this.#hiShown = hi; this.#text.setText(this.#hiLabel, `HI ${hi}`); }
+    const hi = Math.max(this.hiScore.score, this.score.value);
+    if (hi !== this.#hiShown) { this.#hiShown = hi; this.text.setText(this.#hiLabel, `HI ${hi}`); }
   }
 
-  render() { this.#render.render(); }
+  draw() { this.render.render(); }
 
   // Called once from main before start(): pre-synth the audio buffers so the
   // first playBGM / playSFX doesn't block a frame.
-  preload() { this.#audio.prewarm(); }
+  preload() { this.audio.prewarm(); }
 
   dispose() {
-    this.#render.renderer.setAnimationLoop(null);
+    this.render.renderer.setAnimationLoop(null);
     this.#input.dispose();
-    this.#world.dispose();
-    this.#audio.dispose();
-    this.#render.dispose();
-    this.#text.dispose();
+    this.world.dispose();
+    this.audio.dispose();
+    this.render.dispose();
+    this.text.dispose();
 
   }
 
   start() {
-    this.#render.renderer.setAnimationLoop(new GameLoop(this).tick);
+    this.render.renderer.setAnimationLoop(new GameLoop(this).tick);
   }
 }

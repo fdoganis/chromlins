@@ -4,7 +4,7 @@ import { SelectCommand } from '../commands/SelectCommand';
 import type { World } from '../world/World';
 import type { AudioManager } from '../audio/AudioManager';
 import type { Haptics } from '../input/XRGamepadUtils';
-import type { ITransition } from '../core/StateMachine';
+import type { Ctx } from '../core/Ctx';
 import type { ITransform } from '../types/ITransform';
 import type { RenderingManager } from '../rendering/RenderingManager';
 import type { Score } from '../core/Score';
@@ -40,7 +40,7 @@ export class RunState extends State {
   #world: World;
   #audio: AudioManager;
   #haptics: Haptics;
-  #transition: ITransition;
+  #transition: Ctx;
   #text: TextManager;
   #render: RenderingManager;
   #level: Level;
@@ -51,16 +51,16 @@ export class RunState extends State {
   #timerLabel: TextHandle | null = null;
   #lastShownSecond = -1;
 
-  constructor(world: World, audio: AudioManager, haptics: Haptics, transition: ITransition, text: TextManager, render: RenderingManager, score: Score, level: Level) {
+  constructor(ctx: Ctx) {
     super();
-    this.#world = world;
-    this.#audio = audio;
-    this.#haptics = haptics;
-    this.#transition = transition;
-    this.#text = text;
-    this.#render = render;
-    this.#level = level;
-    this.#scoring = new Scoring(world, text, render, score);
+    this.#world = ctx.world;
+    this.#audio = ctx.audio;
+    this.#haptics = ctx.haptics;
+    this.#transition = ctx;
+    this.#text = ctx.text;
+    this.#render = ctx.render;
+    this.#level = ctx.level;
+    this.#scoring = new Scoring(ctx);
     this.#registerHandlers();
   }
 

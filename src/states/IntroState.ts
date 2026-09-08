@@ -6,31 +6,28 @@
 // `if (CINEMATIC === 'full')` branches, so a 'none' build tree-shakes it — and
 // its Timeline / dressGhost / dressUnicorn use — out entirely.
 import { State } from '../core/State';
-import type { ITransition } from '../core/StateMachine';
+import type { Ctx } from '../core/Ctx';
 import { SelectCommand } from '../commands/SelectCommand';
 import { RunState } from './RunState';
 import { CINEMATIC } from '../game.config';
 import { Cinematic } from './Cinematic';
 import type { Score } from '../core/Score';
 import type { Level } from '../core/Level';
-import type { World } from '../world/World';
-import type { AudioManager } from '../audio/AudioManager';
-import type { RenderingManager } from '../rendering/RenderingManager';
 
 export class IntroState extends State {
-  #sm: ITransition;
+  #sm: Ctx;
   #score: Score;
   #level: Level;
   #cine: Cinematic | null = null;
   #bounce = false;
 
-  constructor(sm: ITransition, world: World, audio: AudioManager, render: RenderingManager, score: Score, level: Level) {
+  constructor(ctx: Ctx) {
     super();
-    this.#sm = sm;
-    this.#score = score;
-    this.#level = level;
+    this.#sm = ctx;
+    this.#score = ctx.score;
+    this.#level = ctx.level;
     if (CINEMATIC === 'full') {
-      this.#cine = new Cinematic(world, audio, render, () => this.#sm.change(RunState));
+      this.#cine = new Cinematic(ctx, () => ctx.change(RunState));
       this.on(SelectCommand, () => this.#cine!.skip());
     }
   }

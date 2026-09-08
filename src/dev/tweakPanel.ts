@@ -11,9 +11,7 @@
 // geometry-time knobs (segment count, root offsets, eye/cheek/horn placement)
 // need a respawn, wired to onFinishChange. "copy JSON" dumps the current values
 // so a good set can be pasted back into the source defaults.
-import type { RenderingManager } from '../rendering/RenderingManager';
-import type { World } from '../world/World';
-import type { AudioManager } from '../audio/AudioManager';
+import type { Ctx } from '../core/Ctx';
 import { maneKnobs, hornKnobs, uniFaceKnobs, rebuildHornGeo, rebuildManeGeo } from '../world/unicorn';
 import { ghostEyeKnobs } from '../world/ghostEyes';
 import { textKnobs } from '../text/engines/voxel/VoxelTextEngine';
@@ -25,7 +23,8 @@ type Light = { color: { getHexString(): string; set(v: string): void }; intensit
 const CUES = ['spawn', 'hit', 'unicorn', 'win', 'over', 'tick', 'music'];
 const UNICORN_HEX = '#f3ead7';
 
-export async function openTweakPanel(render: RenderingManager, world: World, audio: AudioManager): Promise<void> {
+export async function openTweakPanel(ctx: Ctx): Promise<void> {
+  const { render, world, audio } = ctx;
   const { default: GUI } = await import('lil-gui');
   const gui = new GUI({ title: 'gamma ?tweak' });
   const respawn = () => world.respawnActors();

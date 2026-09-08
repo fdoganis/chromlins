@@ -1,6 +1,6 @@
 import { Mesh, MeshBasicMaterial, RingGeometry, Vector3 } from 'three';
 import { State } from '../core/State';
-import type { ITransition } from '../core/StateMachine';
+import type { Ctx } from '../core/Ctx';
 import type { RenderingManager } from '../rendering/RenderingManager';
 import { SelectCommand } from '../commands/SelectCommand';
 import { IntroState } from './IntroState';
@@ -13,7 +13,7 @@ const _UP = new Vector3(0, 1, 0);
 
 export class AnchorState extends State {
   #render: RenderingManager;
-  #sm: ITransition;
+  #sm: Ctx;
   #reticle: Mesh;
   #hitTestSource: XRHitTestSource | null | undefined;
   #requested = false;
@@ -22,10 +22,10 @@ export class AnchorState extends State {
   #waited = 0;
   #done = false;
 
-  constructor(render: RenderingManager, sm: ITransition) {
+  constructor(ctx: Ctx) {
     super();
-    this.#render = render;
-    this.#sm = sm;
+    this.#render = ctx.render;
+    this.#sm = ctx;
     this.#reticle = new Mesh(
       new RingGeometry(0.08, 0.1, 32).rotateX(-Math.PI / 2),
       new MeshBasicMaterial()
