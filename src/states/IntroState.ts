@@ -1,15 +1,15 @@
 // Between AnchorState and RunState. Resets the run, then either plays the opening
-// cinematic (CINEMATIC === 'full') or hands straight to RunState. Reached on boot
+// cinematic (BUILD === 'deluxe') or hands straight to RunState. Reached on boot
 // (via AnchorState) and from GameOver / Win / NameEntry on a replay.
 //
 // The cinematic lives in ./Cinematic and is only referenced inside the folded
-// `if (CINEMATIC === 'full')` branches, so a 'none' build tree-shakes it — and
+// `if (BUILD === 'deluxe')` branches, so a 'light' build tree-shakes it — and
 // its Timeline / dressGhost / dressUnicorn use — out entirely.
 import { State } from '../core/State';
 import type { Game } from '../core/Game';
 import { SelectCommand } from '../commands/SelectCommand';
 import { RunState } from './RunState';
-import { CINEMATIC } from '../game.config';
+import { BUILD } from '../game.config';
 import { Cinematic } from './Cinematic';
 import type { Score } from '../core/Score';
 import type { Level } from '../core/Level';
@@ -26,7 +26,7 @@ export class IntroState extends State {
     this.#ctx = ctx;
     this.#score = ctx.score;
     this.#level = ctx.level;
-    if (CINEMATIC === 'full') {
+    if (BUILD === 'deluxe') {
       this.#cine = new Cinematic(ctx, () => ctx.change(RunState));
       this.on(SelectCommand, () => this.#cine!.skip());
     }
@@ -35,16 +35,16 @@ export class IntroState extends State {
   override enter(): void {
     this.#score.reset();
     this.#level.reset();
-    if (CINEMATIC === 'full') this.#cine!.begin();
+    if (BUILD === 'deluxe') this.#cine!.begin();
     else this.#bounce = true; // hand to RunState on the next tick (can't change state mid-enter)
   }
 
   override update(delta: number): void {
     if (this.#bounce) { this.#bounce = false; this.#ctx.change(RunState); return; }
-    if (CINEMATIC === 'full') this.#cine!.update(delta);
+    if (BUILD === 'deluxe') this.#cine!.update(delta);
   }
 
   override exit(): void {
-    if (CINEMATIC === 'full') this.#cine!.end();
+    if (BUILD === 'deluxe') this.#cine!.end();
   }
 }

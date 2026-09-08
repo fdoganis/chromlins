@@ -11,6 +11,23 @@ import { RAINBOW } from '../core/palette';
 import { MANE_SIM } from '../game.config';
 import { Actor, BODY_HALF_m } from './Actor';
 import { BLACK_EYE_MAT } from './Chromlin';
+import { deform } from './deform';
+
+// Live config. `Unicorn.tune` is a DEV-only alias for ?tweak to bind lil-gui to;
+// the class always reads MANE / HORN / FACE, so in a prod build `tune` is
+// unreferenced and folds away.
+const MANE = {
+  backCount: 7, frontCount: 7,
+  radius: 0.006, taper: 0.85,               // tube radius at the root; tip = radius*(1-taper)
+  rootY: 0.006, rootZ: -0.012,              // back-mane root, just behind the horn
+  frontRootYFrac: 0.72, frontRootZ: 0.03,   // forelock root, on the forehead above the eyes
+  backPitch: -0.1, frontPitch: -0.5,        // rest pitch (rad)
+  yawSplay: 0.14, rollSplay: 0.12,          // fan spread across strands
+  stiff: 90, damp: 9, kick: 1.0,            // damped angular spring + rise/sink impulse
+  idle: 0.05,                               // idle sway amplitude
+};
+const HORN = { turns: 2.5, height: 0.075, baseR: 0.02, tiltX: 0.22, posY: 0.02, posZ: 0.012 };
+const FACE = { eyeX: 0.016, eyeYFrac: 0.5, eyeZ: 0.038, cheekX: 0.026, cheekYFrac: 0.32, cheekZ: 0.033, cheekFlat: 0.55 };
 
 const PINK = 0xd8899b;
 const pinkMat = new MeshPhongMaterial({ color: PINK });
@@ -36,17 +53,13 @@ const FRONT_CURVE = new CatmullRomCurve3([
 // taper (taper = 1 → a point), not a scaled mesh.
 function taperedTube(curve: CatmullRomCurve3, rootR: number, taper: number): TubeGeometry {
   const g = new TubeGeometry(curve, MANE_TUB_SEG, rootR, MANE_RAD_SEG, false);
-  const p = g.attributes.position;
-  const c = new Vector3();
-  for (let i = 0; i <= MANE_TUB_SEG; i++) {
-    curve.getPointAt(i / MANE_TUB_SEG, c);
-    const f = 1 - taper * (i / MANE_TUB_SEG);
-    for (let j = 0; j <= MANE_RAD_SEG; j++) {
-      const vi = (MANE_RAD_SEG + 1) * i + j;
-      p.setXYZ(vi, c.x + (p.getX(vi) - c.x) * f, c.y + (p.getY(vi) - c.y) * f, c.z + (p.getZ(vi) - c.z) * f);
-    }
-  }
-  p.needsUpdate = true;
+  const centres = Array.from({ length: MANE_TUB_SEG + 1 }, (_, i) => curve.getPointAt(i / MANE_TUB_SEG, new Vector3()));
+  deform(g, (v, i) => {
+    const ring = (i / (MANE_RAD_SEG + 1)) | 0;
+    const c = centres[ring];
+    const f = 1 - taper * (ring / MANE_TUB_SEG); // ring radius shrinks toward the tip
+    v.set(c.x + (v.x - c.x) * f, c.y + (v.y - c.y) * f, c.z + (v.z - c.z) * f);
+  });
   return g;
 }
 
@@ -62,14 +75,11 @@ type Strand = { root: Vector3; rest: Vector3; phase: number; pts: Vector3[]; seg
 
 function twistedHornGeo(h: number, baseR: number, turns: number): CylinderGeometry {
   const g = new CylinderGeometry(0.001, baseR, h, 6, 8);
-  const pos = g.attributes.position;
-  const v = new Vector3();
-  for (let i = 0; i < pos.count; i++) {
-    v.fromBufferAttribute(pos, i);
+  deform(g, (v) => {
     const a = turns * Math.PI * 2 * (v.y / h + 0.5);
     const c = Math.cos(a), s = Math.sin(a);
-    pos.setXYZ(i, v.x * c - v.z * s, v.y, v.x * s + v.z * c);
-  }
+    v.set(v.x * c - v.z * s, v.y, v.x * s + v.z * c);
+  });
   g.computeVertexNormals();
   return g;
 }
@@ -82,26 +92,13 @@ let tubeFront: TubeGeometry | null = null;
 function buildManeTubes(): void {
   tubeBack?.dispose();
   tubeFront?.dispose();
-  const m = Unicorn.tune.mane;
+  const m = MANE;
   tubeBack = MANE_SIM === 'chain' ? null : taperedTube(BACK_CURVE, m.radius, m.taper);
   tubeFront = MANE_SIM === 'chain' ? null : taperedTube(FRONT_CURVE, m.radius, m.taper);
 }
 
 export class Unicorn extends Actor {
-  static tune = {
-    mane: {
-      backCount: 7, frontCount: 7,
-      radius: 0.006, taper: 0.85,               // tube radius at the root; tip = radius*(1-taper)
-      rootY: 0.006, rootZ: -0.012,              // back-mane root, just behind the horn
-      frontRootYFrac: 0.72, frontRootZ: 0.03,   // forelock root, on the forehead above the eyes
-      backPitch: -0.1, frontPitch: -0.5,        // rest pitch (rad)
-      yawSplay: 0.14, rollSplay: 0.12,          // fan spread across strands
-      stiff: 90, damp: 9, kick: 1.0,            // damped angular spring + rise/sink impulse
-      idle: 0.05,                               // idle sway amplitude
-    },
-    horn: { turns: 2.5, height: 0.075, baseR: 0.02, tiltX: 0.22, posY: 0.02, posZ: 0.012 },
-    face: { eyeX: 0.016, eyeYFrac: 0.5, eyeZ: 0.038, cheekX: 0.026, cheekYFrac: 0.32, cheekZ: 0.033, cheekFlat: 0.55 },
-  };
+  static tune = __DEV__ ? { mane: MANE, horn: HORN, face: FACE } : (0 as never); // ?tweak binds to this
 
   override decoy = true;
 
@@ -111,7 +108,7 @@ export class Unicorn extends Actor {
   constructor(root: Object3D) {
     super(root);
     if (!tubeBack && MANE_SIM !== 'chain') buildManeTubes();
-    const f = Unicorn.tune.face;
+    const f = FACE;
     const body = this.mesh;
 
     for (const sx of [-1, 1]) {
@@ -124,8 +121,8 @@ export class Unicorn extends Actor {
       body.add(cheek);
     }
     const horn = new Mesh(hornGeo, pinkMat);
-    horn.position.set(0, BODY_HALF_m + Unicorn.tune.horn.posY, Unicorn.tune.horn.posZ);
-    horn.rotation.x = Unicorn.tune.horn.tiltX;
+    horn.position.set(0, BODY_HALF_m + HORN.posY, HORN.posZ);
+    horn.rotation.x = HORN.tiltX;
     body.add(horn);
 
     this.#mane = MANE_SIM === 'chain' ? buildChainMane(body) : buildSpringMane(body);
@@ -143,14 +140,14 @@ export class Unicorn extends Actor {
   static rebuildGeo(): void {
     if (!__DEV__) return;
     hornGeo.dispose();
-    hornGeo = twistedHornGeo(Unicorn.tune.horn.height, Unicorn.tune.horn.baseR, Unicorn.tune.horn.turns);
+    hornGeo = twistedHornGeo(HORN.height, HORN.baseR, HORN.turns);
     buildManeTubes();
   }
 }
 
 // ---- 'spring' mane: 14 rigid tube strands, each on a damped angular spring ----
 function buildSpringMane(body: Object3D): ManeUpdate {
-  const k = Unicorn.tune.mane;
+  const k = MANE;
   const springs: Spring[] = [];
   const bank = (geo: TubeGeometry, count: number, rootY: number, rootZ: number, xStep: number, pitch: number) => {
     const mid = (count - 1) / 2;
@@ -179,7 +176,7 @@ function buildSpringMane(body: Object3D): ManeUpdate {
 // ---- 'chain' mane: follow-the-leader rope of tapered cone segments ----
 function makeStrand(body: Object3D, d: number, mat: MeshBasicMaterial): Strand {
   const n = CHAIN.segs;
-  const root = new Vector3(d * 0.006, BODY_HALF_m + Unicorn.tune.mane.rootY, Unicorn.tune.mane.rootZ);
+  const root = new Vector3(d * 0.006, BODY_HALF_m + MANE.rootY, MANE.rootZ);
   const rest = new Vector3(d * 0.14, -0.7, -0.72).normalize();
   const pts = Array.from({ length: n + 1 }, (_, i) => root.clone().addScaledVector(rest, i * CHAIN.segLen));
   const segs = Array.from({ length: n }, (_, j) => {

@@ -14,19 +14,22 @@ const _cam = new Vector3();
 
 type Eye = { pupil: Object3D; x: number; y: number; vx: number; vy: number };
 
+// The live config. `Chromlin.tune` below is a DEV-only alias for the ?tweak
+// panel to bind lil-gui to; the class always reads EYE, so in a prod build
+// `tune` is unreferenced and the alias folds away.
+const EYE = {
+  yawMax: 0.8,     // how far the face can turn toward the player
+  range: 0.006,    // how far the pupil can roam on the eyeball
+  spring: 120,     // pull toward the target — higher = snappier
+  damp: 0.78,      // <1 leaves some overshoot → the googly jiggle
+  kick: 0.03,      // rise/sink acceleration → pupil impulse
+  faceYFrac: 0.55, // face height as a fraction of the body half-height
+  whiteX: 0.014,
+  whiteZ: 0.043,
+};
+
 export class Chromlin extends Actor {
-  // ?tweak binds a lil-gui folder to this. yawMax/range/spring/damp/kick are read
-  // every frame; the rest at build time (so they need a respawn to take effect).
-  static tune = {
-    yawMax: 0.8,     // how far the face can turn toward the player
-    range: 0.006,    // how far the pupil can roam on the eyeball
-    spring: 120,     // pull toward the target — higher = snappier
-    damp: 0.78,      // <1 leaves some overshoot → the googly jiggle
-    kick: 0.03,      // rise/sink acceleration → pupil impulse
-    faceYFrac: 0.55, // face height as a fraction of the body half-height
-    whiteX: 0.014,
-    whiteZ: 0.043,
-  };
+  static tune = __DEV__ ? EYE : (0 as never); // ?tweak binds to this
 
   #face: Object3D;
   #eyes: Eye[] = [];
@@ -34,7 +37,7 @@ export class Chromlin extends Actor {
 
   constructor(root: Object3D) {
     super(root);
-    const k = Chromlin.tune;
+    const k = EYE;
     this.#face = new Object3D();
     this.#face.position.set(0, 0.10 * k.faceYFrac, 0); // 0.10 = Actor half-height
     this.mesh.add(this.#face);
@@ -50,7 +53,7 @@ export class Chromlin extends Actor {
   }
 
   override animate(delta: number, ySpeed: number, camPos: Vector3): void {
-    const k = Chromlin.tune;
+    const k = EYE;
     this.mesh.worldToLocal(_cam.copy(camPos));
     this.#face.rotation.y = MathUtils.clamp(Math.atan2(_cam.x, _cam.z), -k.yawMax, k.yawMax);
     this.#face.updateMatrixWorld();

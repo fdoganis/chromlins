@@ -1,6 +1,6 @@
 // The wordless opening sequence, extracted from IntroState so it stays out of a
-// CINEMATIC === 'none' build entirely (IntroState only references this module
-// inside a folded `if (CINEMATIC === 'full')` branch → it tree-shakes out).
+// BUILD === 'light' build entirely (IntroState only references this module
+// inside a folded `if (BUILD === 'deluxe')` branch → it tree-shakes out).
 //
 // Beats: the rainbow draws in L→R · a cream unicorn bobs at the crown · then, one
 // colour at a time (staggered), a pair of eyes rises from a hole, the matching

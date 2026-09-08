@@ -24,7 +24,7 @@ import { TextManager } from '../text/TextManager';
 import type { TextHandle } from '../text/ITextEngine';
 import { VoxelTextEngine } from '../text/engines/voxel/VoxelTextEngine';
 import { SegmentTextEngine } from '../text/engines/segment/SegmentTextEngine';
-import { TEXT_ENGINE, CINEMATIC } from '../game.config';
+import { TEXT_ENGINE, BUILD } from '../game.config';
 import type { State } from './State';
 import type { ClassOf } from '../types/ClassOf';
 
@@ -81,7 +81,7 @@ export class Game {
     const debugL13 = __DEV__ && 'l13' in q;     // jump straight into the level 13 run
     const debugCalib = __DEV__ && 'calib' in q; // hand-whack calibration (CalibState)
     const debugTweak = __DEV__ && 'tweak' in q; // live-tune panel, over a ?run-style round
-    const debugIntro = __DEV__ && CINEMATIC === 'full' && 'intro' in q; // watch the opening cinematic on desktop
+    const debugIntro = __DEV__ && BUILD === 'deluxe' && 'intro' in q; // watch the opening cinematic on desktop
 
     sm.register(IntroState, new IntroState(this));
     sm.register(AnchorState, new AnchorState(this));
