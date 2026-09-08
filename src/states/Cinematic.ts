@@ -12,7 +12,7 @@
 // + converge), dressGhost / dressUnicorn, the shared capsule geo, Timeline.
 import { Mesh, MeshPhongMaterial, Color, Vector3, MathUtils } from 'three';
 import type { BufferGeometry } from 'three';
-import type { Ctx } from '../core/Ctx';
+import type { Game } from '../core/Game';
 import type { World } from '../world/World';
 import type { AudioManager } from '../audio/AudioManager';
 import type { RenderingManager } from '../rendering/RenderingManager';
@@ -66,13 +66,13 @@ export class Cinematic {
   #outroAt = Infinity;
   #done = false;
 
-  constructor(ctx: Ctx, onDone: () => void) {
+  constructor(ctx: Game, onDone: () => void) {
     this.#world = ctx.world;
     this.#audio = ctx.audio;
-    this.#render = ctx.render;
+    this.#render = ctx.rendering;
     this.#onDone = onDone;
 
-    const anchor = ctx.render.anchor;
+    const anchor = ctx.rendering.anchor;
     this.#uni = new Mesh(CAPSULE_GEO, new MeshPhongMaterial({ color: CREAM }));
     anchor.add(this.#uni);
     this.#uniTick = dressUnicorn(this.#uni, BODY_HALF_m).update;

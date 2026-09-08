@@ -5,7 +5,7 @@
 // / "did this hit win the round?" and forwards misses.
 import { Object3D } from 'three';
 import type { Vector3 } from 'three';
-import type { Ctx } from '../core/Ctx';
+import type { Game } from '../core/Game';
 import type { World } from '../world/World';
 import type { RemovedActor } from '../world/Actors';
 import type { RenderingManager } from '../rendering/RenderingManager';
@@ -40,10 +40,10 @@ export class Scoring {
   #popups: Popup[] = [];
   #label: TextHandle | null = null;
 
-  constructor(ctx: Ctx) {
+  constructor(ctx: Game) {
     this.#world = ctx.world;
     this.#text = ctx.text;
-    this.#render = ctx.render;
+    this.#render = ctx.rendering;
     this.#score = ctx.score;
   }
 

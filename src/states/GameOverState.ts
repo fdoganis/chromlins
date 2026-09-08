@@ -1,5 +1,5 @@
 import { State } from '../core/State';
-import type { Ctx } from '../core/Ctx';
+import type { Game } from '../core/Game';
 import type { TextManager } from '../text/TextManager';
 import type { TextHandle } from '../text/ITextEngine';
 import { SelectCommand } from '../commands/SelectCommand';
@@ -11,21 +11,21 @@ import type { AudioManager } from '../audio/AudioManager';
 
 
 export class GameOverState extends State {
-  #sm: Ctx;
+  #ctx: Game;
   #text: TextManager;
   #score: Score;
   #hi: HiScore;
   #audio: AudioManager;
   #message: TextHandle;
 
-  constructor(ctx: Ctx) {
+  constructor(ctx: Game) {
     super();
-    this.#sm = ctx;
+    this.#ctx = ctx;
     this.#text = ctx.text;
     this.#score = ctx.score;
     this.#hi = ctx.hiScore;
     this.#audio = ctx.audio;
-    this.#message = ctx.text.show('GAME OVER', ctx.render.hudAnchor, { color: '#ff3333', visible: false });
+    this.#message = ctx.text.show('GAME OVER', ctx.rendering.hudAnchor, { color: '#ff3333', visible: false });
     this.#registerHandlers();
   }
 
@@ -34,7 +34,7 @@ export class GameOverState extends State {
   }
 
   #onSelect = () => {
-    this.#sm.change(this.#hi.beaten(this.#score.value) ? NameEntryState : IntroState);
+    this.#ctx.change(this.#hi.beaten(this.#score.value) ? NameEntryState : IntroState);
   };
 
   override enter() {

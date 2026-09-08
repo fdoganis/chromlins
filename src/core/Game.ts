@@ -25,13 +25,12 @@ import type { TextHandle } from '../text/ITextEngine';
 import { VoxelTextEngine } from '../text/engines/voxel/VoxelTextEngine';
 import { SegmentTextEngine } from '../text/engines/segment/SegmentTextEngine';
 import { TEXT_ENGINE, CINEMATIC } from '../game.config';
-import type { Ctx } from './Ctx';
 import type { State } from './State';
 import type { ClassOf } from '../types/ClassOf';
 
-// Game is the composition root and the Ctx every State receives.
-export class Game implements Ctx {
-  readonly render: RenderingManager;
+// Game is the composition root; it is the ctx every State receives.
+export class Game {
+  readonly rendering: RenderingManager;
   readonly audio: AudioManager;
   readonly world: World;
   readonly text: TextManager;
@@ -48,21 +47,21 @@ export class Game implements Ctx {
 
 
   constructor() {
-    this.render = new RenderingManager();
-    this.audio = new AudioManager(this.render.camera, new SoundBoxSoundEngine()); // or: OscillatorSoundEngine / ZzfxSoundEngine
-    this.world = new World(this.render.anchor, this.audio, this.render.camera);
-    this.haptics = new Haptics(this.render.renderer);
-    this.#input = new InputManager(this.render.renderer, this.render.scene, this.render.camera, this.render.anchor);
+    this.rendering = new RenderingManager();
+    this.audio = new AudioManager(this.rendering.camera, new SoundBoxSoundEngine()); // or: OscillatorSoundEngine / ZzfxSoundEngine
+    this.world = new World(this.rendering.anchor, this.audio, this.rendering.camera);
+    this.haptics = new Haptics(this.rendering.renderer);
+    this.#input = new InputManager(this.rendering.renderer, this.rendering.scene, this.rendering.camera, this.rendering.anchor);
     // TEXT_ENGINE is a literal const — rolldown folds the compare and the
     // unpicked engine (plus, for 'segment', all the voxel glyph data) shakes out.
     const textEngine = TEXT_ENGINE === 'segment'
-      ? new SegmentTextEngine(this.render.scene, this.render.camera)
-      : new VoxelTextEngine(this.render.scene, this.render.camera);
+      ? new SegmentTextEngine(this.rendering.scene, this.rendering.camera)
+      : new VoxelTextEngine(this.rendering.scene, this.rendering.camera);
     this.text = new TextManager(textEngine);
 
     // Persistent HUD: the all-time best, shown everywhere. Game.update() ticks it
     // to max(hiScore, live score) so it climbs in real time while you beat it.
-    this.#hiLabel = this.text.show('HI 0', this.render.hiAnchor);
+    this.#hiLabel = this.text.show('HI 0', this.rendering.hiAnchor);
 
     this.#sm = new StateMachine();
     this.#buildStates();
@@ -93,9 +92,9 @@ export class Game implements Ctx {
     if (__DEV__) sm.register(CalibState, new CalibState(this));
 
     if (debugRun || debugName || debugL13 || debugCalib || debugTweak || debugIntro) {
-      this.render.anchor.position.set(0, 0, -0.6);
-      this.render.camera.position.set(0, 0.6, 0.4);
-      this.render.camera.lookAt(0, 0, -0.6);
+      this.rendering.anchor.position.set(0, 0, -0.6);
+      this.rendering.camera.position.set(0, 0.6, 0.4);
+      this.rendering.camera.lookAt(0, 0, -0.6);
     }
     if (debugL13) level.set(13);
     sm.start(
@@ -134,23 +133,23 @@ export class Game implements Ctx {
     if (hi !== this.#hiShown) { this.#hiShown = hi; this.text.setText(this.#hiLabel, `HI ${hi}`); }
   }
 
-  draw() { this.render.render(); }
+  render() { this.rendering.render(); }
 
   // Called once from main before start(): pre-synth the audio buffers so the
   // first playBGM / playSFX doesn't block a frame.
   preload() { this.audio.prewarm(); }
 
   dispose() {
-    this.render.renderer.setAnimationLoop(null);
+    this.rendering.renderer.setAnimationLoop(null);
     this.#input.dispose();
     this.world.dispose();
     this.audio.dispose();
-    this.render.dispose();
+    this.rendering.dispose();
     this.text.dispose();
 
   }
 
   start() {
-    this.render.renderer.setAnimationLoop(new GameLoop(this).tick);
+    this.rendering.renderer.setAnimationLoop(new GameLoop(this).tick);
   }
 }

@@ -30,7 +30,7 @@ export class GameLoop {
       this.#elapsed -= FRAME_s;
     }
 
-    this.#game.draw();
+    this.#game.render();
   }
 }
 

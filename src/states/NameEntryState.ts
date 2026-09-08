@@ -16,7 +16,7 @@ import { IntroState } from './IntroState';
 import { RunState } from './RunState';
 import { RAINBOW } from '../core/palette';
 import type { ClassOf } from '../types/ClassOf';
-import type { Ctx } from '../core/Ctx';
+import type { Game } from '../core/Game';
 import type { World } from '../world/World';
 import type { RenderingManager } from '../rendering/RenderingManager';
 import type { TextManager } from '../text/TextManager';
@@ -42,7 +42,7 @@ const _ray = new Ray();
 type Slot = { id: number; label: TextHandle; char: string; locked: boolean };
 
 export class NameEntryState extends State {
-  #sm: Ctx;
+  #ctx: Game;
   #world: World;
   #text: TextManager;
   #render: RenderingManager;
@@ -58,12 +58,12 @@ export class NameEntryState extends State {
   #exitIn = -1;               // >= 0 once OK is confirmed: seconds until we leave
   #next: ClassOf<State> = IntroState; // where the beat leads — Run (level 13) on "13K"
 
-  constructor(ctx: Ctx) {
+  constructor(ctx: Game) {
     super();
-    this.#sm = ctx;
+    this.#ctx = ctx;
     this.#world = ctx.world;
     this.#text = ctx.text;
-    this.#render = ctx.render;
+    this.#render = ctx.rendering;
     this.#score = ctx.score;
     this.#level = ctx.level;
     this.#hi = ctx.hiScore;
@@ -107,7 +107,7 @@ export class NameEntryState extends State {
 
     if (this.#exitIn >= 0) {
       this.#exitIn -= delta;
-      if (this.#exitIn <= 0) this.#sm.change(this.#next);
+      if (this.#exitIn <= 0) this.#ctx.change(this.#next);
       return;
     }
 

@@ -15,7 +15,7 @@ import { Vector3 } from 'three';
 import { State } from '../core/State';
 import { SelectCommand } from '../commands/SelectCommand';
 import { RAINBOW } from '../core/palette';
-import type { Ctx } from '../core/Ctx';
+import type { Game } from '../core/Game';
 import type { World } from '../world/World';
 import type { RenderingManager } from '../rendering/RenderingManager';
 import type { TextManager } from '../text/TextManager';
@@ -37,7 +37,7 @@ type Phase = 'place' | 'whack' | 'idle' | 'done';
 type Frame = { t: number; hand: string; phase: Phase; m: number[]; w: number[]; i: number[]; r: number; hit?: number[] };
 
 export class CalibState extends State {
-  #sm: Ctx;
+  #ctx: Game;
   #world: World;
   #text: TextManager;
   #render: RenderingManager;
@@ -55,12 +55,12 @@ export class CalibState extends State {
   #hud: TextHandle | null = null;
   #sent = false;
 
-  constructor(ctx: Ctx) {
+  constructor(ctx: Game) {
     super();
-    this.#sm = ctx;
+    this.#ctx = ctx;
     this.#world = ctx.world;
     this.#text = ctx.text;
-    this.#render = ctx.render;
+    this.#render = ctx.rendering;
     this.on(SelectCommand, this.#onSelect);
   }
 

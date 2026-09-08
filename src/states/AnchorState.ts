@@ -1,6 +1,6 @@
 import { Mesh, MeshBasicMaterial, RingGeometry, Vector3 } from 'three';
 import { State } from '../core/State';
-import type { Ctx } from '../core/Ctx';
+import type { Game } from '../core/Game';
 import type { RenderingManager } from '../rendering/RenderingManager';
 import { SelectCommand } from '../commands/SelectCommand';
 import { IntroState } from './IntroState';
@@ -13,7 +13,7 @@ const _UP = new Vector3(0, 1, 0);
 
 export class AnchorState extends State {
   #render: RenderingManager;
-  #sm: Ctx;
+  #ctx: Game;
   #reticle: Mesh;
   #hitTestSource: XRHitTestSource | null | undefined;
   #requested = false;
@@ -22,10 +22,10 @@ export class AnchorState extends State {
   #waited = 0;
   #done = false;
 
-  constructor(ctx: Ctx) {
+  constructor(ctx: Game) {
     super();
-    this.#render = ctx.render;
-    this.#sm = ctx;
+    this.#render = ctx.rendering;
+    this.#ctx = ctx;
     this.#reticle = new Mesh(
       new RingGeometry(0.08, 0.1, 32).rotateX(-Math.PI / 2),
       new MeshBasicMaterial()
@@ -74,7 +74,7 @@ export class AnchorState extends State {
 
   #advance() {
     this.#done = true;
-    this.#sm.change(IntroState); // the opening cinematic, then RunState
+    this.#ctx.change(IntroState); // the opening cinematic, then RunState
   }
 
   override update(delta: number, frame?: XRFrame) {

@@ -6,7 +6,7 @@
 // `if (CINEMATIC === 'full')` branches, so a 'none' build tree-shakes it — and
 // its Timeline / dressGhost / dressUnicorn use — out entirely.
 import { State } from '../core/State';
-import type { Ctx } from '../core/Ctx';
+import type { Game } from '../core/Game';
 import { SelectCommand } from '../commands/SelectCommand';
 import { RunState } from './RunState';
 import { CINEMATIC } from '../game.config';
@@ -15,15 +15,15 @@ import type { Score } from '../core/Score';
 import type { Level } from '../core/Level';
 
 export class IntroState extends State {
-  #sm: Ctx;
+  #ctx: Game;
   #score: Score;
   #level: Level;
   #cine: Cinematic | null = null;
   #bounce = false;
 
-  constructor(ctx: Ctx) {
+  constructor(ctx: Game) {
     super();
-    this.#sm = ctx;
+    this.#ctx = ctx;
     this.#score = ctx.score;
     this.#level = ctx.level;
     if (CINEMATIC === 'full') {
@@ -40,7 +40,7 @@ export class IntroState extends State {
   }
 
   override update(delta: number): void {
-    if (this.#bounce) { this.#bounce = false; this.#sm.change(RunState); return; }
+    if (this.#bounce) { this.#bounce = false; this.#ctx.change(RunState); return; }
     if (CINEMATIC === 'full') this.#cine!.update(delta);
   }
 

@@ -4,7 +4,7 @@ import { SelectCommand } from '../commands/SelectCommand';
 import type { World } from '../world/World';
 import type { AudioManager } from '../audio/AudioManager';
 import type { Haptics } from '../input/XRGamepadUtils';
-import type { Ctx } from '../core/Ctx';
+import type { Game } from '../core/Game';
 import type { ITransform } from '../types/ITransform';
 import type { RenderingManager } from '../rendering/RenderingManager';
 import type { Score } from '../core/Score';
@@ -40,7 +40,7 @@ export class RunState extends State {
   #world: World;
   #audio: AudioManager;
   #haptics: Haptics;
-  #transition: Ctx;
+  #ctx: Game;
   #text: TextManager;
   #render: RenderingManager;
   #level: Level;
@@ -51,14 +51,14 @@ export class RunState extends State {
   #timerLabel: TextHandle | null = null;
   #lastShownSecond = -1;
 
-  constructor(ctx: Ctx) {
+  constructor(ctx: Game) {
     super();
     this.#world = ctx.world;
     this.#audio = ctx.audio;
     this.#haptics = ctx.haptics;
-    this.#transition = ctx;
+    this.#ctx = ctx;
     this.#text = ctx.text;
-    this.#render = ctx.render;
+    this.#render = ctx.rendering;
     this.#level = ctx.level;
     this.#scoring = new Scoring(ctx);
     this.#registerHandlers();
@@ -85,7 +85,7 @@ export class RunState extends State {
     if (this.#scoring.collect(removed)) {
       this.#scoring.awardTimeBonus(this.#timeLeft);
       if (this.#level.value <= LEVEL_COUNT) this.#level.advance(); // L13 is terminal — don't step past it
-      this.#transition.change(WinState);
+      this.#ctx.change(WinState);
     }
   };
 
@@ -142,7 +142,7 @@ export class RunState extends State {
     }
 
     if (this.#timeLeft <= 0) {
-      this.#transition.change(GameOverState);
+      this.#ctx.change(GameOverState);
     }
   }
 

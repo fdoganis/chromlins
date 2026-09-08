@@ -1,5 +1,5 @@
 import { State } from '../core/State';
-import type { Ctx } from '../core/Ctx';
+import type { Game } from '../core/Game';
 import type { TextManager } from '../text/TextManager';
 import type { TextHandle } from '../text/ITextEngine';
 import { SelectCommand } from '../commands/SelectCommand';
@@ -18,7 +18,7 @@ import { RAINBOW } from '../core/palette';
 // after level 7 → the hidden L13 if unlocked, else name entry / Intro; after
 // L13 → "RAINBOW RESTORED" → Intro. (The full wordless finale is still §5.3/§6.)
 export class WinState extends State {
-  #sm: Ctx;
+  #ctx: Game;
   #text: TextManager;
   #score: Score;
   #level: Level;
@@ -26,15 +26,15 @@ export class WinState extends State {
   #audio: AudioManager;
   #message: TextHandle;
 
-  constructor(ctx: Ctx) {
+  constructor(ctx: Game) {
     super();
-    this.#sm = ctx;
+    this.#ctx = ctx;
     this.#text = ctx.text;
     this.#score = ctx.score;
     this.#level = ctx.level;
     this.#hi = ctx.hiScore;
     this.#audio = ctx.audio;
-    this.#message = ctx.text.show('YOU WIN', ctx.render.hudAnchor, { color: '#00ff88', visible: false });
+    this.#message = ctx.text.show('YOU WIN', ctx.rendering.hudAnchor, { color: '#00ff88', visible: false });
     this.#registerHandlers();
   }
 
@@ -44,10 +44,10 @@ export class WinState extends State {
 
   #onSelect = () => {
     const v = this.#level.value;
-    if (v <= LEVEL_COUNT) { this.#sm.change(RunState); return; }   // 1..7 → next level
-    if (v === 13) { this.#sm.change(IntroState); return; }             // L13 cleared
-    if (l13Unlocked()) { this.#level.set(13); this.#sm.change(RunState); return; } // cleared L7, L13 available
-    this.#sm.change(this.#hi.beaten(this.#score.value) ? NameEntryState : IntroState);
+    if (v <= LEVEL_COUNT) { this.#ctx.change(RunState); return; }   // 1..7 → next level
+    if (v === 13) { this.#ctx.change(IntroState); return; }             // L13 cleared
+    if (l13Unlocked()) { this.#level.set(13); this.#ctx.change(RunState); return; } // cleared L7, L13 available
+    this.#ctx.change(this.#hi.beaten(this.#score.value) ? NameEntryState : IntroState);
   };
 
   override enter() {

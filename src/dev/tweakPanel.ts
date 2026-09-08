@@ -11,7 +11,7 @@
 // geometry-time knobs (segment count, root offsets, eye/cheek/horn placement)
 // need a respawn, wired to onFinishChange. "copy JSON" dumps the current values
 // so a good set can be pasted back into the source defaults.
-import type { Ctx } from '../core/Ctx';
+import type { Game } from '../core/Game';
 import { maneKnobs, hornKnobs, uniFaceKnobs, rebuildHornGeo, rebuildManeGeo } from '../world/unicorn';
 import { ghostEyeKnobs } from '../world/ghostEyes';
 import { textKnobs } from '../text/engines/voxel/VoxelTextEngine';
@@ -23,8 +23,8 @@ type Light = { color: { getHexString(): string; set(v: string): void }; intensit
 const CUES = ['spawn', 'hit', 'unicorn', 'win', 'over', 'tick', 'music'];
 const UNICORN_HEX = '#f3ead7';
 
-export async function openTweakPanel(ctx: Ctx): Promise<void> {
-  const { render, world, audio } = ctx;
+export async function openTweakPanel(ctx: Game): Promise<void> {
+  const { rendering, world, audio } = ctx;
   const { default: GUI } = await import('lil-gui');
   const gui = new GUI({ title: 'gamma ?tweak' });
   const respawn = () => world.respawnActors();
@@ -34,7 +34,7 @@ export async function openTweakPanel(ctx: Ctx): Promise<void> {
   // --- scene: orbit the camera, freeze the clock, force a body up -------------
   const scene = gui.addFolder('scene');
   const { OrbitControls } = await import('three/addons/controls/OrbitControls.js');
-  const orbit = new OrbitControls(render.camera, render.renderer.domElement);
+  const orbit = new OrbitControls(rendering.camera, rendering.renderer.domElement);
   orbit.target.set(0, 0, -0.6);
   orbit.update();
   scene.add(orbit, 'enabled').name('orbit controls');
@@ -99,7 +99,7 @@ export async function openTweakPanel(ctx: Ctx): Promise<void> {
   text.add(textKnobs, 'fill', 0.3, 1, 0.02);
   text.add(textKnobs, 'floatHeight', 0, 0.2, 0.005);
 
-  const lg = render.lights;
+  const lg = rendering.lights;
   if (lg) {
     const lights = gui.addFolder('lights');
     const addLight = (name: string, l: Light, maxI: number) => {
