@@ -134,19 +134,47 @@ function buildManeGeos(): void {
 export class Unicorn extends Actor {
   // Config, on the class. groom / ?tweak bind lil-gui folders to mane / horn / face.
   static tune = {
-    mane: {
-      backCount: 7, foreCount: 7,
-      radius: 0.006, taper: 0.85,           // tube radius at the root; tip = radius*(1-taper)
-      len: 0.15, foreLen: 0.06,             // strand path length (back mane / forelock)
-      lift: 0.55, drop: 1.5, sBend: 0.45,   // S profile: start-up pitch, total downward sweep, undulation (rad)
-      backFan: 0.13, foreFan: 0.11,         // per-strand yaw fan (rad)
-      xStep: 0.008,                         // root spacing across the crown
-      backRootZ: -0.008, foreRootYFrac: 0.82, foreRootZ: 0.03,
-      margin: 0.012,                        // capsule clearance held at rest and (bounded) in motion
-      stiff: 90, damp: 9, kick: 1.0, idle: 0.05, // damped angular spring + rise/sink impulse + idle sway
+    "mane": {
+      "backCount": 7,
+      "foreCount": 7,
+      "radius": 0.018,
+      "taper": 1,
+      "len": 0.2,
+      "foreLen": 0.07,
+      "lift": -0.8,
+      "drop": 2,
+      "sBend": 0.5,
+      "backFan": -0.25,
+      "foreFan": 0.25,
+      "xStep": 0.002,
+      "backRootZ": 0.008,
+      "foreRootYFrac": 0.82,
+      "foreRootZ": 0.005,
+      "margin": 0.008,
+      "stiff": 80,
+      "damp": 20,
+      "kick": 2,
+      "idle": 0.1
     },
-    horn: { turns: 2.5, height: 0.075, baseR: 0.02, tiltX: 0.22, posY: 0.02, posZ: 0.012 },
-    face: { eyeX: 0.016, eyeYFrac: 0.5, eyeZ: 0.038, cheekX: 0.026, cheekYFrac: 0.32, cheekZ: 0.033, cheekFlat: 0.55, muzzleYFrac: 0.16, muzzleZ: 0.04 },
+    "horn": {
+      "turns": 2.5,
+      "height": 0.075,
+      "baseR": 0.02,
+      "tiltX": 0.3,
+      "posY": 0.027,
+      "posZ": 0.017
+    },
+    "face": {
+      "eyeX": 0.016,
+      "eyeYFrac": 0.5,
+      "eyeZ": 0.038,
+      "cheekX": 0.026,
+      "cheekYFrac": 0.32,
+      "cheekZ": 0.033,
+      "cheekFlat": 0.6,
+      "muzzleYFrac": 0.18,
+      "muzzleZ": 0.04
+    }
   };
 
   override decoy = true;
