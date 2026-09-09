@@ -43,6 +43,7 @@ export class Game {
   #sm: StateMachine;
   #hiLabel: TextHandle;
   #hiShown = -1;
+  #hiName = '';
 
   change(state: ClassOf<State>): void { this.#sm.change(state); }
 
@@ -131,7 +132,12 @@ export class Game {
     this.text.update(delta); // labels are global, not owned by the active state
 
     const hi = Math.max(this.hiScore.score, this.score.value);
-    if (hi !== this.#hiShown) { this.#hiShown = hi; this.text.setText(this.#hiLabel, `HI ${hi}`); }
+    const name = this.hiScore.name;
+    if (hi !== this.#hiShown || name !== this.#hiName) {
+      this.#hiShown = hi;
+      this.#hiName = name;
+      this.text.setText(this.#hiLabel, `HI ${hi} ${name}`);
+    }
   }
 
   render() { this.rendering.render(); }
