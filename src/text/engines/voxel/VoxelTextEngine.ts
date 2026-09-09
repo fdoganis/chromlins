@@ -12,6 +12,10 @@ import type { IGlyphSource } from '../../glyphs/IGlyphSource';
 import { BitmapGlyphs } from '../../glyphs/BitmapGlyphs';
 import { LIGHT_FONT } from '../../glyphs/light-font';
 import { FULL_FONT } from '../../glyphs/full-font';
+import { SQUARE6_FONT } from '../../glyphs/square6-font';
+import { ROUND6_FONT } from '../../glyphs/round6-font';
+import { THICK8_FONT } from '../../glyphs/thick8-font';
+import { MINOGRAM_FONT } from '../../glyphs/minogram-font';
 import { CanvasGlyphs } from '../../glyphs/CanvasGlyphs';
 
 // Every label's voxels are indices into one shared InstancedPool (see
@@ -70,6 +74,10 @@ export class VoxelTextEngine implements ITextEngine {
     this.#glyphs =
       GLYPH_SOURCE === 'canvas' ? new CanvasGlyphs() :
       GLYPH_SOURCE === 'full' ? new BitmapGlyphs(FULL_FONT) :
+      GLYPH_SOURCE === 'square6' ? new BitmapGlyphs(SQUARE6_FONT) :
+      GLYPH_SOURCE === 'round6' ? new BitmapGlyphs(ROUND6_FONT) :
+      GLYPH_SOURCE === 'thick8' ? new BitmapGlyphs(THICK8_FONT) :
+      GLYPH_SOURCE === 'minogram' ? new BitmapGlyphs(MINOGRAM_FONT) :
       new BitmapGlyphs(LIGHT_FONT);
   }
 

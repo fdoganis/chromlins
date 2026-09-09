@@ -9,12 +9,17 @@
 //               'segment' fork tree-shakes VoxelTextEngine + all of glyphs/
 export const TEXT_ENGINE: 'voxel' | 'segment' = 'voxel';
 
-// Glyph source for VoxelTextEngine:
-//   'light'  — ~38 glyphs (space + - 0-9 A-Z), the game's whole charset incl.
-//              NameEntryState's initials cycle, smallest (default)
-//   'full'   — the whole 95-glyph LittleJS font
-//   'canvas' — rasterise the browser's monospace font, no glyph data shipped
-export const GLYPH_SOURCE: 'full' | 'light' | 'canvas' = 'light';
+// Glyph source for VoxelTextEngine. The bitmap fonts all ship only the 39
+// glyphs the game draws (space + - 0-9 A-Z); scripts/font-pack.mjs regenerates
+// them from assets/fonts/*.{png,xml} (`npm run fonts`).
+//   'light'    — 8x8, sliced from the LittleJS engine font, smallest (default)
+//   'full'     — the whole 95-glyph LittleJS font
+//   'square6'  — 6x6 blocky
+//   'round6'   — 6x6 rounded
+//   'thick8'   — 8x8 heavy
+//   'minogram' — 6x10, a taller display face (+~80 B)
+//   'canvas'   — rasterise the browser's monospace font, no glyph data shipped
+export const GLYPH_SOURCE: 'full' | 'light' | 'square6' | 'round6' | 'thick8' | 'minogram' | 'canvas' = 'light';
 
 // Voxel text shading:
 //   'phong'  — MeshPhongMaterial lit by the scene (picks up the sky tint)
