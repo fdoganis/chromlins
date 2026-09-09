@@ -77,3 +77,57 @@ file.
 | page won't load over the tunnel | the tunnel URL changed — use the newest `npm run cloud` line |
 | nothing saved on the Mac | both terminals + tunnel still up? use `xr-hand-recorder.html` → Download |
 | board is too low / high | you pinched with your hand not flat on the table — reload and redo the place step |
+
+---
+
+# Unicorn groom studio
+
+`npm run groom` opens `groom.html` — a standalone page (never imported by
+`src/`, so zero bundle weight) for designing the unicorn's mane, horn and face.
+It renders one `Unicorn` scaled ~3×, a wireframe capsule cage (the volume
+strands must stay out of), and a lil-gui panel bound to every `Unicorn.tune`
+value.
+
+## Navigate
+
+- **Orbit** — drag to rotate, scroll to zoom. Turn to the back for the mane.
+- `sim → face camera` — off by default so the model holds still while you orbit.
+  On = it yaws toward you like in-game.
+- `sim → rise/sink kick` — drag up/down to fake the body rising/sinking; the
+  spring mane swings so you can judge motion.
+- Every field **rebuilds the geometry on release**. Type whole numbers for the
+  `*Count` fields.
+
+## `mane` knobs (metres / radians)
+
+| knob | effect |
+|---|---|
+| `len` / `foreLen` | strand path length — back mane / forelock. Raise `len` for a long drape down the back. |
+| `lift` | initial pitch off the root (rad, + = up). Negative = the hair falls straight away. |
+| `drop` | total downward sweep by the tip. Higher = hangs straighter; lower = stays arched over the head. |
+| `sBend` | the mid-strand undulation that makes it an S. `0` = plain arc. |
+| `backFan` / `foreFan` | yaw spread across strands (rad). `0` = one plane; higher = wider fan around the head. |
+| `xStep` | root spacing across the crown. |
+| `radius` / `taper` | tube thickness at the root; `taper 1` = pointed tip, `0` = constant. |
+| `margin` | clearance every sample is pushed off the body — raise if a strand clips the capsule in motion. |
+| `backRootZ` | back-mane root Z (− = behind the horn). |
+| `foreRootYFrac` / `foreRootZ` | forelock root — height as a fraction of the body half-height, and front offset. |
+| `stiff` / `damp` / `kick` / `idle` | spring **motion**, not shape (stiffness, damping, rise/sink impulse, idle sway). |
+
+`horn` and `face` folders work the same; the muzzle is `face → muzzleYFrac` /
+`muzzleZ`.
+
+## Save it back
+
+1. `sim → copy Unicorn.tune JSON` — copies the whole `{ mane, horn, face }`.
+2. In `src/world/Unicorn.ts`, replace the objects inside `static tune = { … }`.
+3. `git diff src/world/Unicorn.ts` — only numbers should change.
+4. Verify at true scale: `npm run dev`, `?tweak` → `scene → toggle unicorn`
+   (or play a round). `?tweak`'s `mane motion` folder has the live spring knobs.
+
+## Caveat — not WYSIWYG yet
+
+The groom camera is 45° FOV; the game camera is **75°** and sits closer. A wide
+lens close up visibly spreads a yaw fan — judge `backFan` / `foreFan` **face-on**
+(`sim → face camera` on) and expect the mane to read wider in-game than in the
+editor.
