@@ -82,7 +82,7 @@ export async function openTweakPanel(ctx: Game): Promise<void> {
   horn.add(Unicorn.tune.horn, 'posZ', -0.03, 0.05, 0.005).onFinishChange(respawn);
 
   const face = gui.addFolder('unicorn face');
-  for (const key of ['eyeX', 'eyeYFrac', 'eyeZ', 'cheekX', 'cheekYFrac', 'cheekZ', 'cheekFlat'] as const)
+  for (const key of ['eyeX', 'eyeYFrac', 'eyeZ', 'cheekX', 'cheekYFrac', 'cheekZ', 'cheekFlat', 'muzzleYFrac', 'muzzleZ'] as const)
     face.add(Unicorn.tune.face, key, -0.06, 0.08, 0.002).onFinishChange(respawn);
 
   const eyes = gui.addFolder('ghost eyes');

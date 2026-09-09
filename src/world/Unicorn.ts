@@ -18,6 +18,7 @@ const pinkMat = new MeshPhongMaterial({ color: PINK });
 const maneMat = RAINBOW.map((c) => new MeshBasicMaterial({ color: c, toneMapped: false })); // vivid, like the arcs
 const eyeGeo = new SphereGeometry(0.012, 8, 6);
 const cheekGeo = new SphereGeometry(0.010, 6, 5);
+const muzzleGeo = new SphereGeometry(0.022, 10, 8); // ~half the body diameter; flattened on place into a snout patch
 
 type ManeUpdate = (dt: number, ySpeed: number, t: number) => void;
 
@@ -95,7 +96,7 @@ export class Unicorn extends Actor {
       idle: 0.05,                               // idle sway amplitude
     },
     horn: { turns: 2.5, height: 0.075, baseR: 0.02, tiltX: 0.22, posY: 0.02, posZ: 0.012 },
-    face: { eyeX: 0.016, eyeYFrac: 0.5, eyeZ: 0.038, cheekX: 0.026, cheekYFrac: 0.32, cheekZ: 0.033, cheekFlat: 0.55 },
+    face: { eyeX: 0.016, eyeYFrac: 0.5, eyeZ: 0.038, cheekX: 0.026, cheekYFrac: 0.32, cheekZ: 0.033, cheekFlat: 0.55, muzzleYFrac: 0.16, muzzleZ: 0.04 },
   };
 
   override decoy = true;
@@ -118,6 +119,12 @@ export class Unicorn extends Actor {
       cheek.scale.set(1, 1, f.cheekFlat); // flattened → a painted blush spot, not a ball
       body.add(cheek);
     }
+    // nose + mouth: one flattened pink sphere, centred, low on the face
+    const muzzle = new Mesh(muzzleGeo, pinkMat);
+    muzzle.position.set(0, BODY_HALF_m * f.muzzleYFrac, f.muzzleZ);
+    muzzle.scale.set(1, 0.7, f.cheekFlat); // barely protruding, a touch squashed vertically
+    body.add(muzzle);
+
     const horn = new Mesh(hornGeo, pinkMat);
     horn.position.set(0, BODY_HALF_m + Unicorn.tune.horn.posY, Unicorn.tune.horn.posZ);
     horn.rotation.x = Unicorn.tune.horn.tiltX;
@@ -220,6 +227,6 @@ function buildChainMane(body: Object3D): ManeUpdate {
 }
 
 export function disposeUnicornAssets(): void {
-  for (const g of [hornGeo, segGeo, tubeBack, tubeFront, eyeGeo, cheekGeo]) g?.dispose();
+  for (const g of [hornGeo, segGeo, tubeBack, tubeFront, eyeGeo, cheekGeo, muzzleGeo]) g?.dispose();
   for (const m of [pinkMat, ...maneMat]) m.dispose(); // BLACK_EYE_MAT is owned by Chromlin
 }
