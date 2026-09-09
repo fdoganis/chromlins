@@ -1,15 +1,13 @@
-// A packed 8x8 bitmap font as an IGlyphSource. Deterministic across every
-// browser/OS (no canvas, no font availability question). `full-font` and
-// `light-font` are the same class with different data + index maps.
+// A packed bitmap font as an IGlyphSource. Deterministic across every
+// browser/OS (no canvas, no font availability question). Every *-font.ts is
+// the same class with different data + index map + cell size.
 import type { IGlyphSource, Glyphs } from './IGlyphSource';
 
-const GLYPH_W = 8;
-const GLYPH_H = 8;
-const ADVANCE = GLYPH_W + 1; // one blank column between glyphs
-
 export type BitmapFont = {
-  data: Uint8Array;                  // GLYPH_H bytes per glyph, one bit = one lit cell
-  indexOf: (ch: string) => number;  // glyph slot for a character, or -1
+  w: number;                        // glyph cell width  (bits used per row byte, <= 8)
+  h: number;                        // glyph cell height (bytes per glyph)
+  data: Uint8Array;                 // h bytes per glyph, one bit = one lit cell (MSB = left)
+  indexOf: (ch: string) => number; // glyph slot for a character, or -1
 };
 
 export class BitmapGlyphs implements IGlyphSource {
@@ -17,24 +15,26 @@ export class BitmapGlyphs implements IGlyphSource {
   constructor(font: BitmapFont) { this.#font = font; }
 
   layout(text: string): Glyphs {
+    const { w, h, data } = this.#font;
+    const advance = w + 1; // one blank column between glyphs
     const cells: Array<[number, number]> = [];
     let col = 0;
     let lineTop = 0;   // y of the current line's top row
     let maxCol = 0;
     for (const ch of text) {
-      if (ch === '\n') { lineTop += GLYPH_H + 1; col = 0; continue; } // blank row between lines
+      if (ch === '\n') { lineTop += h + 1; col = 0; continue; } // blank row between lines
       const gi = this.#font.indexOf(ch);
       if (gi < 0) continue; // unknown glyph: skip it entirely, like the original
-      const base = gi * GLYPH_H;
-      for (let y = 0; y < GLYPH_H; y++) {
-        const row = this.#font.data[base + y];
-        for (let x = 0; x < GLYPH_W; x++) {
-          if ((row >> (GLYPH_W - 1 - x)) & 1) cells.push([col + x, lineTop + y]);
+      const base = gi * h;
+      for (let y = 0; y < h; y++) {
+        const row = data[base + y];
+        for (let x = 0; x < w; x++) {
+          if ((row >> (w - 1 - x)) & 1) cells.push([col + x, lineTop + y]);
         }
       }
-      col += ADVANCE;
+      col += advance;
       if (col > maxCol) maxCol = col;
     }
-    return { cells, width: Math.max(0, maxCol - 1), height: lineTop + GLYPH_H };
+    return { cells, width: Math.max(0, maxCol - 1), height: lineTop + h };
   }
 }

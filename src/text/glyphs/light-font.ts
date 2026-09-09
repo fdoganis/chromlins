@@ -15,6 +15,8 @@ function unpack(b64: string): Uint8Array {
 }
 
 export const LIGHT_FONT: BitmapFont = {
+  w: 8,
+  h: 8,
   data: /*#__PURE__*/ unpack(PACKED),
   indexOf: (ch) => {
     const c = ch.charCodeAt(0);
