@@ -17,6 +17,7 @@ type Particle = {
 
 const SPREAD_m = 0.3; // meters a particle travels from / to the burst origin
 const IDENTITY_QUAT = new Quaternion(); // particles never rotate // TODO: QUESTION: why not?
+const WHITE = new Color(0xffffff);
 
 export type BurstMode = 'explode' | 'converge'; // TODO: replace with a better enum?
 
@@ -87,10 +88,23 @@ export class Sparkles {
   }
 
 
-  #fire(p: Particle, origin: Vector3, mode: BurstMode, scale: number) {
+  // A quick, small, colourless puff where an aimed swing hit nothing. A handful
+  // of group-A particles, forced white, tight spread. Group A is matchColor, so
+  // the next real burst repaints it — nothing lingers.
+  spark(origin: Vector3) {
+    const g = this.#groups[0];
+    if (!g.color.equals(WHITE)) {
+      g.color.copy(WHITE);
+      for (const p of g.particles) this.#pool.setColor(p.index, WHITE);
+    }
+    const n = Math.min(6, g.particles.length);
+    for (let i = 0; i < n; i++) this.#fire(g.particles[i], origin, 'explode', g.scale * 0.6, SPREAD_m * 0.4);
+  }
+
+  #fire(p: Particle, origin: Vector3, mode: BurstMode, scale: number, spread = SPREAD_m) {
     _offset.set(
       Math.random() * 2 - 1, Math.random() * 2 - 1, Math.random() * 2 - 1
-    ).normalize().multiplyScalar(SPREAD_m * (0.5 + Math.random() * 0.5));
+    ).normalize().multiplyScalar(spread * (0.5 + Math.random() * 0.5));
 
     _scattered.copy(origin).add(_offset);
 

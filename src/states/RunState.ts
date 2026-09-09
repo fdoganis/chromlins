@@ -35,6 +35,7 @@ const TICK_FROM_S = 5;          // countdown pulse plays for the last N seconds
 const _origin = new Vector3();
 const _dir = new Vector3();
 const _ray = new Ray();
+const _hit = new Vector3();
 
 export class RunState extends State {
   #world: World;
@@ -73,10 +74,14 @@ export class RunState extends State {
   // penalty path, everything else goes to Scoring. Completing every color → win
   // with a leftover-time bonus, then advance the level.
   #onSelect = (cmd: SelectCommand) => {
-    const removed = __DEV__ && cmd.debugRandom
-      ? this.#world.hitRandom()
-      : this.#world.hit(this.#rayFrom(cmd.transform), cmd.reach || undefined);
-    if (!removed) return;
+    const aimed = !(__DEV__ && cmd.debugRandom);
+    const removed = aimed
+      ? this.#world.hit(this.#rayFrom(cmd.transform), cmd.reach || undefined)
+      : this.#world.hitRandom();
+    if (!removed) {
+      if (aimed) { const p = this.#whiffPoint(); if (p) this.#world.spark(p); } // show where a swing at nothing landed
+      return;
+    }
 
     this.#haptics.pulse(cmd.handedness);
 
@@ -93,6 +98,19 @@ export class RunState extends State {
     _origin.setFromMatrixPosition(t.matrixWorld);
     _dir.set(0, 0, -1).transformDirection(t.matrixWorld);
     return _ray.set(_origin, _dir);
+  }
+
+  // Where the last aimed ray (_ray, still set from #rayFrom) crossed the board
+  // plane, returned in anchor-local space — the same frame a hit position is in,
+  // so the puff lands on the surface. null if the aim never meets the plane.
+  #whiffPoint(): Vector3 | null {
+    const d = _ray.direction;
+    if (Math.abs(d.y) < 1e-4) return null;
+    const planeY = this.#render.anchor.getWorldPosition(_hit).y;
+    const dist = (planeY - _ray.origin.y) / d.y;
+    if (dist <= 0) return null;
+    _hit.copy(_ray.origin).addScaledVector(d, dist);
+    return this.#render.anchor.worldToLocal(_hit);
   }
 
   #trySpawn() {

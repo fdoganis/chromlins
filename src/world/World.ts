@@ -80,6 +80,11 @@ export class World {
     this.#sparkles.burst(origin, color, mode);
   }
 
+  // Colourless mini-puff where an aimed swing hit nothing.
+  spark(origin: Vector3): void {
+    this.#sparkles.spark(origin);
+  }
+
   // Aim a ray at the live actors. A normal body is removed and the collect
   // effect fires. A decoy (unicorn) is left standing — only a pink puff plays —
   // and the hit is still reported so RunState can run its penalty. Returns
