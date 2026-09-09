@@ -88,6 +88,7 @@ export class Game {
     const debugL13 = __DEV__ && 'l13' in q;     // jump straight into the level 13 run
     const debugCalib = __DEV__ && 'calib' in q; // hand-whack calibration (CalibState)
     const debugTweak = __DEV__ && 'tweak' in q; // live-tune panel, over a ?run-style round
+    const debugUni = __DEV__ && 'uni' in q;     // force the unicorn peeking (mane tuning + tests/mane.spec.ts)
     const debugIntro = __DEV__ && BUILD === 'deluxe' && 'intro' in q; // watch the opening cinematic on desktop
 
     sm.register(IntroState, new IntroState(this));
@@ -98,7 +99,7 @@ export class Game {
     sm.register(NameEntryState, new NameEntryState(this));
     if (__DEV__) sm.register(CalibState, new CalibState(this));
 
-    if (debugRun || debugName || debugL13 || debugCalib || debugTweak || debugIntro) {
+    if (debugRun || debugName || debugL13 || debugCalib || debugTweak || debugUni || debugIntro) {
       this.rendering.anchor.position.set(0, 0, -0.6);
       this.rendering.camera.position.set(0, 0.6, 0.4);
       this.rendering.camera.lookAt(0, 0, -0.6);
@@ -108,10 +109,12 @@ export class Game {
       debugCalib ? CalibState : // its own hand-on-surface placement step
       debugName ? NameEntryState :
       debugIntro ? IntroState :
-      debugRun || debugL13 || debugTweak ? RunState :
+      debugRun || debugL13 || debugTweak || debugUni ? RunState :
       AnchorState, // place the board, then IntroState (cinematic), then RunState
     );
     if (__DEV__ && debugTweak) import('../dev/tweakPanel').then((m) => m.openTweakPanel(this));
+    // a unicorn peeking at hole 0, held — after RunState.enter()'s world.reset()
+    if (__DEV__ && debugUni) queueMicrotask(() => this.world.spawnAtHole(0, '#f3ead7', Infinity, -1, true));
   }
 
   #bindInput(): void {

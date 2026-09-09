@@ -127,8 +127,10 @@ value.
 1. `sim → copy tune JSON` — copies the whole `{ mane, horn, face }`.
 2. In `src/world/Unicorn.ts`, replace the objects inside `static tune = { … }`.
 3. `git diff src/world/Unicorn.ts` — only numbers should change.
-4. Verify at true scale: `npm run dev`, `?tweak` → `scene → toggle unicorn`
-   (or play a round). `?tweak`'s `mane motion` folder has the live spring knobs.
+4. Verify at true scale: `npm run dev`, open **`?uni`** — the unicorn peeks at
+   hole 0 and holds, so you see exactly the in-game slice. `?tweak`'s `mane
+   motion` folder has the live spring knobs; `?tweak&u=<share URL>` applies a
+   groomed look without editing the source.
 
 ## Share a look
 
