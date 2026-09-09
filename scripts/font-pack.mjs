@@ -1,6 +1,6 @@
 // scripts/font-pack.mjs <name>     name = square6 | round6 | thick8 | minogram
 //
-// Takes a BMFont pair (assets/fonts/<stem>.png + .xml), extracts ONLY the 39
+// Takes a BMFont pair (assets/fonts/<stem>/<stem>.png + .xml), extracts ONLY the 39
 // glyphs the game ever draws — space + - 0-9 A-Z — thresholds each to 1 bit per
 // pixel, packs H bytes per glyph (one byte per row, MSB-justified), base64s the
 // lot, and writes src/text/glyphs/<name>-font.ts. Same shape as the hand-made
@@ -59,8 +59,9 @@ function decodePNG(buf) {
   return { w, h, px };
 }
 
-const xml = readFileSync(`assets/fonts/${stem}.xml`, 'utf8');
-const { w: aw, px } = decodePNG(readFileSync(`assets/fonts/${stem}.png`));
+const dir = `assets/fonts/${stem}`;
+const xml = readFileSync(`${dir}/${stem}.xml`, 'utf8');
+const { w: aw, px } = decodePNG(readFileSync(`${dir}/${stem}.png`));
 
 // BMFont <char> rects. Attribute order is fixed in these files; the leading
 // space keeps ` x="` from matching ` xadvance="`.
