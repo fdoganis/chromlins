@@ -17,9 +17,10 @@ export const TEXT_ENGINE: 'voxel' | 'segment' = 'voxel';
 //   'square6'  — 6x6 blocky
 //   'round6'   — 6x6 rounded
 //   'thick8'   — 8x8 heavy
-//   'minogram' — 6x10, a taller display face (+~80 B)
+//   'minogram' — 6x10 display face (+~80 B)
+//   'monogram' — 5x12 tall condensed face (+~130 B)
 //   'canvas'   — rasterise the browser's monospace font, no glyph data shipped
-export const GLYPH_SOURCE: 'full' | 'light' | 'square6' | 'round6' | 'thick8' | 'minogram' | 'canvas' = 'light';
+export const GLYPH_SOURCE: 'full' | 'light' | 'square6' | 'round6' | 'thick8' | 'minogram' | 'monogram' | 'canvas' = 'light';
 
 // Voxel text shading:
 //   'phong'  — MeshPhongMaterial lit by the scene (picks up the sky tint)

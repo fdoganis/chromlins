@@ -1,28 +1,39 @@
-// scripts/font-pack.mjs <name>     name = square6 | round6 | thick8 | minogram
+// scripts/font-pack.mjs <name>   name = square6 | round6 | thick8 | minogram | monogram
 //
-// Takes a BMFont pair (assets/fonts/<stem>/<stem>.png + .xml), extracts ONLY the 39
-// glyphs the game ever draws — space + - 0-9 A-Z — thresholds each to 1 bit per
-// pixel, packs H bytes per glyph (one byte per row, MSB-justified), base64s the
-// lot, and writes src/text/glyphs/<name>-font.ts. Same shape as the hand-made
-// light-font.ts. No deps: PNG inflate + unfilter is inline (all four atlases are
-// 8-bit RGBA, non-interlaced).
+// Extracts ONLY the 39 glyphs the game ever draws — space + - 0-9 A-Z — from a
+// font atlas, thresholds each to 1 bit per pixel, packs h bytes per glyph (one
+// byte per row, MSB = leftmost column), base64s it, and writes
+// src/text/glyphs/<name>-font.ts in the same shape as the hand-made light-font.ts.
+// No deps: PNG inflate + unfilter is inline.
 //
-// The source PNG/XML are never shipped — only the ~250-500 B base64 string is,
-// and only for the font GLYPH_SOURCE selects (the rest tree-shake).
+// Two source formats:
+//   bmfont — assets/fonts/<stem>/<stem>.png (8-bit RGBA) + .xml  (square/round/thick/minogram)
+//   bfm    — assets/fonts/monogram/bitmap/monogram-bitmap.json   (BitFontMaker2: {char: [rowInts]})
 //
-//   node scripts/font-pack.mjs square6   (or: npm run fonts  — regenerates all)
+// The source assets are never shipped — only the ~250-620 B base64 string, and
+// only for the font GLYPH_SOURCE selects (the rest tree-shake).
+//
+//   node scripts/font-pack.mjs square6      (or: npm run fonts — regenerates all)
 import { readFileSync, writeFileSync } from 'node:fs';
 import { inflateSync } from 'node:zlib';
 
-const STEM = { square6: 'square_6x6', round6: 'round_6x6', thick8: 'thick_8x8', minogram: 'minogram_6x10' };
+const FONT = {
+  square6: { fmt: 'bmfont', stem: 'square_6x6' },
+  round6: { fmt: 'bmfont', stem: 'round_6x6' },
+  thick8: { fmt: 'bmfont', stem: 'thick_8x8' },
+  minogram: { fmt: 'bmfont', stem: 'minogram_6x10' },
+  monogram: { fmt: 'bfm', json: 'monogram/bitmap/monogram-bitmap.json' },
+};
 const name = process.argv[2];
-const stem = STEM[name];
-if (!stem) { console.error(`usage: node scripts/font-pack.mjs <${Object.keys(STEM).join(' | ')}>`); process.exit(1); }
+const cfg = FONT[name];
+if (!cfg) { console.error(`usage: node scripts/font-pack.mjs <${Object.keys(FONT).join(' | ')}>`); process.exit(1); }
+
+// glyph slot order — must match every *-font.ts indexOf: space, '+', '-', 0-9, A-Z
+const CHARS = [' ', '+', '-', ...'0123456789', ...'ABCDEFGHIJKLMNOPQRSTUVWXYZ'];
 
 // --- minimal PNG decode: 8-bit RGBA, non-interlaced -> flat RGBA buffer ---
 function decodePNG(buf) {
-  let p = 8; // PNG signature
-  let w = 0, h = 0;
+  let p = 8, w = 0, h = 0;
   const idat = [];
   while (p < buf.length) {
     const len = buf.readUInt32BE(p);
@@ -42,9 +53,9 @@ function decodePNG(buf) {
     const ft = raw[y * (stride + 1)];
     const row = raw.subarray(y * (stride + 1) + 1, y * (stride + 1) + 1 + stride);
     for (let i = 0; i < stride; i++) {
-      const a = i >= bpp ? px[y * stride + i - bpp] : 0;              // left
-      const b = y ? px[(y - 1) * stride + i] : 0;                     // up
-      const c = y && i >= bpp ? px[(y - 1) * stride + i - bpp] : 0;   // up-left
+      const a = i >= bpp ? px[y * stride + i - bpp] : 0;
+      const b = y ? px[(y - 1) * stride + i] : 0;
+      const c = y && i >= bpp ? px[(y - 1) * stride + i - bpp] : 0;
       let v = row[i];
       if (ft === 1) v += a;
       else if (ft === 2) v += b;
@@ -59,63 +70,79 @@ function decodePNG(buf) {
   return { w, h, px };
 }
 
-const dir = `assets/fonts/${stem}`;
-const xml = readFileSync(`${dir}/${stem}.xml`, 'utf8');
-const { w: aw, px } = decodePNG(readFileSync(`${dir}/${stem}.png`));
+// --- BMFont: crop each <char> rect from the atlas, threshold ---
+function packBMFont(stem) {
+  const dir = `assets/fonts/${stem}`;
+  const xml = readFileSync(`${dir}/${stem}.xml`, 'utf8');
+  const { w: aw, px } = decodePNG(readFileSync(`${dir}/${stem}.png`));
 
-// BMFont <char> rects. Attribute order is fixed in these files; the leading
-// space keeps ` x="` from matching ` xadvance="`.
-const rect = new Map();
-for (const m of xml.matchAll(/<char id="(\d+)"\s+x="(\d+)"\s+y="(\d+)"\s+width="(\d+)"\s+height="(\d+)"/g))
-  rect.set(+m[1], { x: +m[2], y: +m[3], w: +m[4], h: +m[5] });
+  const rect = new Map();
+  for (const m of xml.matchAll(/<char id="(\d+)"\s+x="(\d+)"\s+y="(\d+)"\s+width="(\d+)"\s+height="(\d+)"/g))
+    rect.set(+m[1], { x: +m[2], y: +m[3], w: +m[4], h: +m[5] });
 
-// slot order must match every *-font.ts indexOf: space, '+', '-', 0-9, A-Z
-const CODES = [32, 43, 45,
-  ...Array.from({ length: 10 }, (_, i) => 48 + i),
-  ...Array.from({ length: 26 }, (_, i) => 65 + i)];
+  const GW = Math.max(...CHARS.map((c) => rect.get(c.charCodeAt(0))?.w ?? 0));
+  const GH = Math.max(...CHARS.map((c) => rect.get(c.charCodeAt(0))?.h ?? 0));
 
-const GW = Math.max(...CODES.map((c) => rect.get(c)?.w ?? 0));
-const GH = Math.max(...CODES.map((c) => rect.get(c)?.h ?? 0));
+  // shape is in the alpha channel (RGB uniformly white); fall back to luma if a
+  // future atlas is fully opaque.
+  let alphaVaries = false;
+  for (let i = 3; i < px.length; i += 4) if (px[i] <= 127) { alphaVaries = true; break; }
+  let lit;
+  if (alphaVaries) {
+    lit = (gx, gy) => px[(gy * aw + gx) * 4 + 3] > 127;
+  } else {
+    const hist = new Map();
+    for (let i = 0; i < px.length; i += 4) {
+      const l = ((px[i] + px[i + 1] + px[i + 2]) / 3) | 0;
+      hist.set(l, (hist.get(l) ?? 0) + 1);
+    }
+    const bg = [...hist].sort((a, b) => b[1] - a[1])[0][0];
+    lit = (gx, gy) => { const i = (gy * aw + gx) * 4; return Math.abs((px[i] + px[i + 1] + px[i + 2]) / 3 - bg) > 64; };
+  }
+
+  const bytes = [], missing = [];
+  for (const ch of CHARS) {
+    const c = rect.get(ch.charCodeAt(0));
+    if (!c) { missing.push(ch); for (let r = 0; r < GH; r++) bytes.push(0); continue; }
+    for (let r = 0; r < GH; r++) {
+      let byte = 0;
+      for (let x = 0; x < GW; x++)
+        if (r < c.h && x < c.w && lit(c.x + x, c.y + r)) byte |= 1 << (GW - 1 - x);
+      bytes.push(byte);
+    }
+  }
+  return { GW, GH, bytes, missing };
+}
+
+// --- BitFontMaker2 JSON: {char: [rowInt...]}, bit 0 = leftmost column ---
+function packBFM(jsonPath) {
+  const j = JSON.parse(readFileSync(`assets/fonts/${jsonPath}`, 'utf8'));
+  const GH = j.A.length;
+  let GW = 1;
+  for (const ch of CHARS) for (const r of (j[ch] ?? [])) GW = Math.max(GW, 32 - Math.clz32(r || 0));
+
+  const bytes = [], missing = [];
+  for (const ch of CHARS) {
+    const rows = j[ch];
+    if (!rows) { missing.push(ch); for (let r = 0; r < GH; r++) bytes.push(0); continue; }
+    for (let r = 0; r < GH; r++) {
+      let byte = 0;
+      const src = rows[r] || 0;
+      for (let x = 0; x < GW; x++) if ((src >> x) & 1) byte |= 1 << (GW - 1 - x); // LSB=left -> MSB=left
+      bytes.push(byte);
+    }
+  }
+  return { GW, GH, bytes, missing };
+}
+
+const { GW, GH, bytes, missing } = cfg.fmt === 'bfm' ? packBFM(cfg.json) : packBMFont(cfg.stem);
 if (GW > 8) { console.error(`glyph width ${GW} > 8 — one byte per row can't hold it`); process.exit(1); }
-
-// These atlases carry the glyph in the alpha channel (RGB is uniformly white).
-// If a future atlas is fully opaque instead, fall back to luma vs. the most
-// common (background) luma.
-let alphaVaries = false;
-for (let i = 3; i < px.length; i += 4) if (px[i] <= 127) { alphaVaries = true; break; }
-let lit;
-if (alphaVaries) {
-  lit = (gx, gy) => px[(gy * aw + gx) * 4 + 3] > 127;
-} else {
-  const hist = new Map();
-  for (let i = 0; i < px.length; i += 4) {
-    const l = ((px[i] + px[i + 1] + px[i + 2]) / 3) | 0;
-    hist.set(l, (hist.get(l) ?? 0) + 1);
-  }
-  const bg = [...hist].sort((a, b) => b[1] - a[1])[0][0];
-  lit = (gx, gy) => {
-    const i = (gy * aw + gx) * 4;
-    return Math.abs((px[i] + px[i + 1] + px[i + 2]) / 3 - bg) > 64;
-  };
-}
-
-const bytes = [];
-const missing = [];
-for (const code of CODES) {
-  const c = rect.get(code);
-  if (!c) { missing.push(code); for (let r = 0; r < GH; r++) bytes.push(0); continue; }
-  for (let r = 0; r < GH; r++) {
-    let byte = 0;
-    for (let x = 0; x < GW; x++)
-      if (r < c.h && x < c.w && lit(c.x + x, c.y + r)) byte |= 1 << (GW - 1 - x);
-    bytes.push(byte);
-  }
-}
-if (missing.length) console.warn(`  missing (blank): ${missing.map((c) => JSON.stringify(String.fromCharCode(c))).join(' ')}`);
+if (missing.length) console.warn(`  missing (blank): ${missing.map((c) => JSON.stringify(c)).join(' ')}`);
 
 const b64 = Buffer.from(bytes).toString('base64');
+const src = cfg.fmt === 'bfm' ? cfg.json : `${cfg.stem}/{png,xml}`;
 const OUT = `src/text/glyphs/${name}-font.ts`;
-writeFileSync(OUT, `// Generated by scripts/font-pack.mjs from assets/fonts/${stem}.{png,xml}.
+writeFileSync(OUT, `// Generated by scripts/font-pack.mjs from assets/fonts/${src}.
 // The 39 glyphs the game draws — space + - 0-9 A-Z — at ${GW}x${GH}, ${bytes.length} bytes.
 // Selected with GLYPH_SOURCE === '${name}'.
 import type { BitmapFont } from './BitmapGlyphs';
