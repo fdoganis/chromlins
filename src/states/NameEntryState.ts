@@ -14,7 +14,7 @@ import { State } from '../core/State';
 import { SelectCommand } from '../commands/SelectCommand';
 import { IntroState } from './IntroState';
 import { RunState } from './RunState';
-import { RAINBOW } from '../core/palette';
+import { RAINBOW, HUD_TEXT } from '../core/palette';
 import type { ClassOf } from '../types/ClassOf';
 import type { Game } from '../core/Game';
 import type { World } from '../world/World';
@@ -78,7 +78,7 @@ export class NameEntryState extends State {
     this.#next = IntroState;
     this.#slots = [];
     this.#okId = -1;
-    this.#prompt = this.#text.show('NEW HI', this.#render.hudAnchor, { color: '#ffcc33' });
+    this.#prompt = this.#text.show('NEW HI', this.#render.hudAnchor, { color: HUD_TEXT });
     this.#raiseSlot(0);
   }
 

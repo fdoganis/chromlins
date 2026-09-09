@@ -25,6 +25,7 @@ import type { TextHandle } from '../text/ITextEngine';
 import { VoxelTextEngine } from '../text/engines/voxel/VoxelTextEngine';
 import { SegmentTextEngine } from '../text/engines/segment/SegmentTextEngine';
 import { TEXT_ENGINE, BUILD } from '../game.config';
+import { HUD_TEXT } from './palette';
 import type { State } from './State';
 import type { ClassOf } from '../types/ClassOf';
 
@@ -61,7 +62,7 @@ export class Game {
 
     // Persistent HUD: the all-time best, shown everywhere. Game.update() ticks it
     // to max(hiScore, live score) so it climbs in real time while you beat it.
-    this.#hiLabel = this.text.show('HI 0', this.rendering.hiAnchor);
+    this.#hiLabel = this.text.show('HI 0', this.rendering.hiAnchor, { color: HUD_TEXT });
 
     this.#sm = new StateMachine();
     this.#buildStates();

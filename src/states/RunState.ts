@@ -11,7 +11,7 @@ import type { Score } from '../core/Score';
 import type { Level } from '../core/Level';
 import { LEVELS, LEVEL_COUNT, L13 } from '../core/levels';
 import type { LevelConfig } from '../core/levels';
-import { RAINBOW } from '../core/palette';
+import { RAINBOW, HUD_TEXT } from '../core/palette';
 import { GameOverState } from './GameOverState';
 import { WinState } from './WinState';
 import { Scoring } from './Scoring';
@@ -153,7 +153,7 @@ export class RunState extends State {
     this.#spawnCooldown = this.#cfg.spawnEvery;
     this.#world.reset();
     this.#scoring.reset(this.#cfg.reps ?? this.#level.value, this.#cfg.snatchAll ?? false); // level N → N taps per color; L13 → 3 + wipe-all unicorn
-    this.#timerLabel = this.#text.show(String(Math.ceil(this.#timeLeft)), this.#render.timerAnchor, { color: '#ffffff' });
+    this.#timerLabel = this.#text.show(String(Math.ceil(this.#timeLeft)), this.#render.timerAnchor, { color: HUD_TEXT });
     this.#audio.activate();
     this.#audio.playBGM('music'); // looping bed for the round only
   }

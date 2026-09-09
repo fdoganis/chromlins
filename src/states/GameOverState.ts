@@ -5,6 +5,7 @@ import type { TextHandle } from '../text/ITextEngine';
 import { SelectCommand } from '../commands/SelectCommand';
 import { IntroState } from './IntroState';
 import { NameEntryState } from './NameEntryState';
+import { HUD_TEXT } from '../core/palette';
 import type { Score } from '../core/Score';
 import type { HiScore } from '../core/HiScore';
 import type { AudioManager } from '../audio/AudioManager';
@@ -25,7 +26,7 @@ export class GameOverState extends State {
     this.#score = ctx.score;
     this.#hi = ctx.hiScore;
     this.#audio = ctx.audio;
-    this.#message = ctx.text.show('GAME OVER', ctx.rendering.hudAnchor, { color: '#ff3333', visible: false });
+    this.#message = ctx.text.show('GAME OVER', ctx.rendering.hudAnchor, { color: HUD_TEXT, visible: false });
     this.#registerHandlers();
   }
 

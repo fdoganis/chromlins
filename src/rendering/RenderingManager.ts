@@ -53,19 +53,19 @@ export class RenderingManager {
     this.camera.position.set(0, 1.6, 3); // NOTE: Once in XR setting the camera is pointless: your head / smartphone screen drives the camera
 
     this.hudAnchor = new Group();
-    this.hudAnchor.position.set(0, 0, -1); // 1m in front of wherever the camera looks
+    this.hudAnchor.position.set(0, 0.18, -1); // 1m ahead of the viewer, lifted above eye-line so it clears the board
     this.camera.add(this.hudAnchor);
 
     this.timerAnchor = new Group();
-    this.timerAnchor.position.set(0, 0.3, -0.16); // just under the rainbow's crown
+    this.timerAnchor.position.set(0, 0.42, -0.16); // up by the rainbow's crown
     this.anchor.add(this.timerAnchor);
 
     this.scoreAnchor = new Group();
-    this.scoreAnchor.position.set(-0.52, 0.3, -0.15); // upper-left, outside the arc
+    this.scoreAnchor.position.set(-0.52, 0.42, -0.15); // upper-left, outside the arc
     this.anchor.add(this.scoreAnchor);
 
     this.hiAnchor = new Group();
-    this.hiAnchor.position.set(0.52, 0.3, -0.15); // upper-right, mirror of the score
+    this.hiAnchor.position.set(0.52, 0.42, -0.15); // upper-right, mirror of the score
     this.anchor.add(this.hiAnchor);
 
     this.renderer.shadowMap.enabled = true;

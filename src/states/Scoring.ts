@@ -12,7 +12,7 @@ import type { RenderingManager } from '../rendering/RenderingManager';
 import type { Score } from '../core/Score';
 import type { TextManager } from '../text/TextManager';
 import type { TextHandle } from '../text/ITextEngine';
-import { RAINBOW } from '../core/palette';
+import { RAINBOW, HUD_TEXT } from '../core/palette';
 
 const POINTS_PER_STREAK = 100; // k-th unbroken collect scores k * this
 const TIME_BONUS_PER_S = 50;   // leftover seconds → points on a win
@@ -119,7 +119,7 @@ export class Scoring {
     this.#streak = 0;
     this.#counts.fill(0);
     this.#order.length = 0;
-    this.#label = this.#text.show(String(this.#score.value), this.#render.scoreAnchor, { color: '#ffffff' });
+    this.#label = this.#text.show(String(this.#score.value), this.#render.scoreAnchor, { color: HUD_TEXT });
   }
 
   teardown(): void {
