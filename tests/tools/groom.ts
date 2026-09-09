@@ -6,13 +6,14 @@
 // + tone mapping mirror src/rendering/RenderingManager.ts, and `view` has FOV
 // presets — a wide lens close up spreads a yaw fan, so judge backFan/foreFan
 // through the lens you'll ship on (the headset is ~100° H; see D11 / the
-// gamma-webxr-fov memory). The wireframe capsule is the no-go volume for the
-// mane (Unicorn.tune.mane.margin).
+// gamma-webxr-fov memory). `sim` has rise/sink playback, a floor grid, and a
+// toggle for the wireframe capsule (the no-go volume, Unicorn.tune.mane.margin).
 import {
   Scene, Color, PerspectiveCamera, WebGLRenderer, HemisphereLight,
   DirectionalLight, Mesh, CapsuleGeometry, MeshBasicMaterial, Vector3, Clock,
-  NeutralToneMapping, SRGBColorSpace,
+  GridHelper, NeutralToneMapping, SRGBColorSpace,
 } from 'three';
+import { BODY_HALF_m } from '../../src/world/Actor';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import GUI from 'lil-gui';
 import { Unicorn } from '../../src/world/Unicorn';
@@ -50,11 +51,19 @@ const orbit = new OrbitControls(camera, renderer.domElement);
 orbit.target.set(0, 0.03, 0);
 orbit.update();
 
-// the capsule the mane must not enter (BODY_R_m 0.045, BODY_LEN_m 0.11)
-scene.add(new Mesh(
+// floor reference at the unicorn's "table" height (capsule bottom)
+const grid = new GridHelper(0.5, 10, 0x445566, 0x223344);
+grid.position.y = -BODY_HALF_m;
+scene.add(grid);
+
+// the capsule the mane must not enter (BODY_R_m 0.045, BODY_LEN_m 0.11) — off
+// by default (the body mesh already shows the volume); on for a crisp boundary
+const cage = new Mesh(
   new CapsuleGeometry(0.045, 0.11, 4, 16),
   new MeshBasicMaterial({ color: 0x556677, wireframe: true }),
-));
+);
+cage.visible = false;
+scene.add(cage);
 
 // a shared look: ?u=<base64 of Unicorn.tune> — merge it before the first build
 const shared = new URLSearchParams(location.search).get('u');
@@ -85,12 +94,15 @@ const fovC = view.add(camera, 'fov', 30, 110, 1).onChange(() => camera.updatePro
 for (const [label, v] of [['preview 55°', 55], ['game desktop 75°', 75], ['headset ~95°', 95]] as const)
   view.add({ [label]: () => fovC.setValue(v) }, label);
 
-const sim = { ySpeed: 0, hold: false };
+const sim = { ySpeed: 0, playback: false, hold: false, cage: false };
 const sf = gui.addFolder('sim');
-sf.add(sim, 'ySpeed', -3, 3, 0.1).name('rise/sink kick');
+sf.add(sim, 'playback').name('rise/sink playback'); // oscillates ySpeed so the spring mane cycles
+sf.add(sim, 'ySpeed', -3, 3, 0.1).name('rise/sink kick (manual)');
 sf.add(sim, 'hold').name('hold still (to orbit the back)'); // off = faces you, like in-game
+sf.add(sim, 'cage').name('capsule cage').onChange((v: boolean) => { cage.visible = v; });
 sf.add({ json: () => navigator.clipboard?.writeText(JSON.stringify(Unicorn.tune, null, 2)) }, 'json').name('copy tune JSON');
 sf.add({ url: () => navigator.clipboard?.writeText(shareURL()) }, 'url').name('copy share URL'); // paste into groom, or the game as ?tweak&u=…
+sf.add({ reset: () => { location.href = location.pathname; } }, 'reset').name('reset (reload, drops ?u=)');
 
 const bind = (obj: Record<string, number>, name: string) => {
   const f = gui.addFolder(name);
@@ -105,7 +117,8 @@ const camPos = new Vector3();
 renderer.setAnimationLoop(() => {
   const dt = Math.min(clock.getDelta(), 0.05);
   camera.getWorldPosition(camPos);
-  uni.animate(dt, sim.ySpeed, camPos);
+  const ys = sim.playback ? Math.sin(clock.elapsedTime * 2.2) * 2.5 : sim.ySpeed;
+  uni.animate(dt, ys, camPos);
   if (sim.hold) uni.mesh.rotation.y = 0; // animate() yaws to face camPos (like in-game); pin it to orbit the back
   orbit.update();
   renderer.render(scene, camera);

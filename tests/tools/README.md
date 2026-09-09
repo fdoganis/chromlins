@@ -93,8 +93,13 @@ value.
 - **Orbit** — drag to rotate, scroll to zoom. Turn to the back for the mane.
 - `sim → face camera` — off by default so the model holds still while you orbit.
   On = it yaws toward you like in-game.
-- `sim → rise/sink kick` — drag up/down to fake the body rising/sinking; the
-  spring mane swings so you can judge motion.
+- `sim → rise/sink playback` — oscillates the rise/sink so the spring mane
+  cycles like an in-game appearance; `rise/sink kick (manual)` is the by-hand
+  version.
+- `sim → capsule cage` — the wireframe no-go volume (off by default; the body
+  mesh already shows it). `reset` reloads (and drops any `?u=`).
+- `view` folder — FOV slider + `preview 55°` / `game desktop 75°` / `headset
+  ~95°` presets. A wide lens close up spreads a yaw fan.
 - Every field **rebuilds the geometry on release**. Type whole numbers for the
   `*Count` fields.
 
@@ -133,9 +138,12 @@ clipboard. Open that link and the groom studio loads with that look. The same
 `?tweak&u=…` or `?run&u=…` shows the shared look at true scale / in AR without
 editing `Unicorn.tune`.
 
-## Caveat — not WYSIWYG yet
+## FOV — judge the fan through the shipping lens
 
-The groom camera is 45° FOV; the game camera is **75°** and sits closer. A wide
-lens close up visibly spreads a yaw fan — judge `backFan` / `foreFan` **face-on**
-(`sim → face camera` on) and expect the mane to read wider in-game than in the
-editor.
+The light rig, tone mapping and default camera (75°) mirror the game's
+desktop preview. But in an immersive WebXR session three.js **ignores
+`camera.fov`** — the runtime supplies per-eye projection, ~100° H on Quest 3
+(see `.doc/DECISIONS.md` D11 / the `gamma-webxr-fov` memory). A wide lens close
+up visibly spreads a *yaw* fan, so set `view` to `headset ~95°`, `sim → hold
+still` off (faces you, like in-game), and expect `backFan` / `foreFan` to read
+wider on-device than in any narrow preview.
