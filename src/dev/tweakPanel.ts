@@ -29,7 +29,6 @@ export async function openTweakPanel(ctx: Game): Promise<void> {
   const gui = new GUI({ title: 'gamma ?tweak' });
   const respawn = () => world.respawnActors();
   const rebuildHorn = () => { Unicorn.rebuildGeo(); respawn(); };
-  const rebuildMane = () => { Unicorn.rebuildGeo(); respawn(); };
 
   // --- scene: orbit the camera, freeze the clock, force a body up -------------
   const scene = gui.addFolder('scene');
@@ -57,21 +56,13 @@ export async function openTweakPanel(ctx: Game): Promise<void> {
   sfx.add(cue, 'sfx', CUES);
   sfx.add({ 'play sfx': () => audio.playSFX(cue.sfx) }, 'play sfx');
 
-  const mane = gui.addFolder('mane (spring)');
+  // Just the live spring-motion knobs here — the S-drape shape is designed in
+  // the groom studio (tests/tools/groom.html, `npm run groom`).
+  const mane = gui.addFolder('mane motion');
   mane.add(Unicorn.tune.mane, 'stiff', 10, 300, 5);
   mane.add(Unicorn.tune.mane, 'damp', 1, 30, 0.5);
   mane.add(Unicorn.tune.mane, 'kick', 0, 4, 0.05);
   mane.add(Unicorn.tune.mane, 'idle', 0, 0.2, 0.005);
-  for (const key of ['backPitch', 'frontPitch', 'yawSplay', 'rollSplay'] as const)
-    mane.add(Unicorn.tune.mane, key, -1, 1, 0.02).onFinishChange(respawn);
-  mane.add(Unicorn.tune.mane, 'radius', 0.002, 0.016, 0.001).onFinishChange(rebuildMane);
-  mane.add(Unicorn.tune.mane, 'taper', 0, 1, 0.02).onFinishChange(rebuildMane);
-  mane.add(Unicorn.tune.mane, 'backCount', 0, 9, 1).onFinishChange(respawn);
-  mane.add(Unicorn.tune.mane, 'frontCount', 0, 9, 1).onFinishChange(respawn);
-  mane.add(Unicorn.tune.mane, 'rootY', -0.05, 0.05, 0.002).onFinishChange(respawn);
-  mane.add(Unicorn.tune.mane, 'rootZ', -0.06, 0.02, 0.002).onFinishChange(respawn);
-  mane.add(Unicorn.tune.mane, 'frontRootYFrac', 0.4, 1, 0.02).onFinishChange(respawn);
-  mane.add(Unicorn.tune.mane, 'frontRootZ', 0, 0.06, 0.002).onFinishChange(respawn);
 
   const horn = gui.addFolder('horn');
   horn.add(Unicorn.tune.horn, 'turns', 0, 6, 0.1).onFinishChange(rebuildHorn);
