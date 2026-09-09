@@ -309,3 +309,13 @@ export function disposeUnicornAssets(): void {
   for (const g of [hornGeo, segGeo, eyeGeo, cheekGeo, muzzleGeo]) g?.dispose();
   for (const m of [pinkMat, ...maneMat]) m.dispose(); // BLACK_EYE_MAT is owned by Chromlin
 }
+
+// Merge a base64'd Unicorn.tune subset (from the groom studio's "share URL")
+// into the live tune. Call BEFORE the first `new Unicorn()`. DEV only — the
+// `?u=` route in Game.ts is `__DEV__`-guarded, so this tree-shakes in prod.
+export function applyTuneShare(b64: string): void {
+  try {
+    const t = JSON.parse(atob(b64)) as Partial<typeof Unicorn.tune>;
+    for (const k of ['mane', 'horn', 'face'] as const) if (t[k]) Object.assign(Unicorn.tune[k], t[k]);
+  } catch { /* not a valid share string — ignore */ }
+}

@@ -26,6 +26,7 @@ import { VoxelTextEngine } from '../text/engines/voxel/VoxelTextEngine';
 import { SegmentTextEngine } from '../text/engines/segment/SegmentTextEngine';
 import { TEXT_ENGINE, BUILD } from '../game.config';
 import { HUD_TEXT } from './palette';
+import { applyTuneShare } from '../world/Unicorn';
 import type { State } from './State';
 import type { ClassOf } from '../types/ClassOf';
 
@@ -49,6 +50,10 @@ export class Game {
 
 
   constructor() {
+    // `?u=<base64>` — a unicorn look shared from the groom studio. Merge it into
+    // Unicorn.tune before World builds the unicorn. Folds out of prod.
+    if (__DEV__) { const u = getQuery().u; if (u) applyTuneShare(u); }
+
     this.rendering = new RenderingManager();
     this.audio = new AudioManager(this.rendering.camera, new SoundBoxSoundEngine()); // or: OscillatorSoundEngine / ZzfxSoundEngine
     this.world = new World(this.rendering.anchor, this.audio, this.rendering.camera);

@@ -119,11 +119,19 @@ value.
 
 ## Save it back
 
-1. `sim → copy Unicorn.tune JSON` — copies the whole `{ mane, horn, face }`.
+1. `sim → copy tune JSON` — copies the whole `{ mane, horn, face }`.
 2. In `src/world/Unicorn.ts`, replace the objects inside `static tune = { … }`.
 3. `git diff src/world/Unicorn.ts` — only numbers should change.
 4. Verify at true scale: `npm run dev`, `?tweak` → `scene → toggle unicorn`
    (or play a round). `?tweak`'s `mane motion` folder has the live spring knobs.
+
+## Share a look
+
+`sim → copy share URL` puts `…/groom.html?u=<base64 of Unicorn.tune>` on the
+clipboard. Open that link and the groom studio loads with that look. The same
+`?u=` param works on the **game** (`__DEV__` only, folds out of prod) — e.g.
+`?tweak&u=…` or `?run&u=…` shows the shared look at true scale / in AR without
+editing `Unicorn.tune`.
 
 ## Caveat — not WYSIWYG yet
 

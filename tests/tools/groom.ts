@@ -56,6 +56,15 @@ scene.add(new Mesh(
   new MeshBasicMaterial({ color: 0x556677, wireframe: true }),
 ));
 
+// a shared look: ?u=<base64 of Unicorn.tune> — merge it before the first build
+const shared = new URLSearchParams(location.search).get('u');
+if (shared) {
+  try {
+    const t = JSON.parse(atob(shared));
+    for (const k of ['mane', 'horn', 'face'] as const) if (t[k]) Object.assign(Unicorn.tune[k], t[k]);
+  } catch { /* bad param — ignore */ }
+}
+
 let uni: Unicorn;
 function rebuild() {
   if (uni) scene.remove(uni.mesh);
@@ -66,6 +75,8 @@ function rebuild() {
   uni.recolor('#f3ead7');
 }
 rebuild();
+
+const shareURL = () => `${location.origin}${location.pathname}?u=${btoa(JSON.stringify(Unicorn.tune))}`;
 
 const gui = new GUI({ title: 'unicorn groom' });
 
@@ -78,7 +89,8 @@ const sim = { ySpeed: 0, hold: false };
 const sf = gui.addFolder('sim');
 sf.add(sim, 'ySpeed', -3, 3, 0.1).name('rise/sink kick');
 sf.add(sim, 'hold').name('hold still (to orbit the back)'); // off = faces you, like in-game
-sf.add({ copy: () => navigator.clipboard?.writeText(JSON.stringify(Unicorn.tune, null, 2)) }, 'copy').name('copy Unicorn.tune JSON');
+sf.add({ json: () => navigator.clipboard?.writeText(JSON.stringify(Unicorn.tune, null, 2)) }, 'json').name('copy tune JSON');
+sf.add({ url: () => navigator.clipboard?.writeText(shareURL()) }, 'url').name('copy share URL'); // paste into groom, or the game as ?tweak&u=…
 
 const bind = (obj: Record<string, number>, name: string) => {
   const f = gui.addFolder(name);
