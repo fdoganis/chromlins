@@ -16,7 +16,8 @@
     "pack": "npm run build && node scripts/pack.mjs && node scripts/zip.mjs",
     "lsgit": "git ls-files | sed 's|^|https://github.com/fdoganis/gamma/blob/main/|'",
     "smoke": "node scripts/smoke.mjs",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "test:packed": "playwright test tests/packed.spec.ts"
   },
   "devDependencies": {
     "@babel/core": "^8.0.1",
