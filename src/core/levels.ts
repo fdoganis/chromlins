@@ -15,13 +15,13 @@ export type LevelConfig = {
 };
 
 export const LEVELS: LevelConfig[] = [
-  { spawnEvery: 0.90, jitter: 0.60, maxActive: 5, upMin: 0.7, upMax: 1.8, unicornChance: 0.12 },
-  { spawnEvery: 0.80, jitter: 0.55, maxActive: 5, upMin: 0.7, upMax: 1.7, unicornChance: 0.14 },
-  { spawnEvery: 0.72, jitter: 0.50, maxActive: 6, upMin: 0.6, upMax: 1.6, unicornChance: 0.16 },
-  { spawnEvery: 0.64, jitter: 0.45, maxActive: 6, upMin: 0.6, upMax: 1.5, unicornChance: 0.18 },
-  { spawnEvery: 0.56, jitter: 0.40, maxActive: 7, upMin: 0.5, upMax: 1.4, unicornChance: 0.20 },
-  { spawnEvery: 0.48, jitter: 0.35, maxActive: 7, upMin: 0.5, upMax: 1.3, unicornChance: 0.22 },
-  { spawnEvery: 0.40, jitter: 0.30, maxActive: 8, upMin: 0.4, upMax: 1.2, unicornChance: 0.25 },
+  { spawnEvery: 0.90, jitter: 0.60, maxActive: 5, upMin: 0.7, upMax: 1.8, unicornChance: 0.20 },
+  { spawnEvery: 0.80, jitter: 0.55, maxActive: 5, upMin: 0.7, upMax: 1.7, unicornChance: 0.23 },
+  { spawnEvery: 0.72, jitter: 0.50, maxActive: 6, upMin: 0.6, upMax: 1.6, unicornChance: 0.26 },
+  { spawnEvery: 0.64, jitter: 0.45, maxActive: 6, upMin: 0.6, upMax: 1.5, unicornChance: 0.30 },
+  { spawnEvery: 0.56, jitter: 0.40, maxActive: 7, upMin: 0.5, upMax: 1.4, unicornChance: 0.33 },
+  { spawnEvery: 0.48, jitter: 0.35, maxActive: 7, upMin: 0.5, upMax: 1.3, unicornChance: 0.37 },
+  { spawnEvery: 0.40, jitter: 0.30, maxActive: 8, upMin: 0.4, upMax: 1.2, unicornChance: 0.40 },
 ];
 
 export const LEVEL_COUNT = LEVELS.length;
@@ -32,7 +32,7 @@ export const LEVEL_COUNT = LEVELS.length;
 // cadence, and the unicorn wipes *everything*.
 export const L13: LevelConfig = {
   spawnEvery: 0.34, jitter: 0.22, maxActive: 8, upMin: 0.35, upMax: 1.0,
-  unicornChance: 0.32, reps: 3, roundS: 35, snatchAll: true,
+  unicornChance: 0.45, reps: 3, roundS: 35, snatchAll: true,
 };
 
 export function l13Unlocked(): boolean {
