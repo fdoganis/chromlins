@@ -11,8 +11,8 @@ import type { Hole } from './Hole';
 export const BODY_R_m = 0.045;
 const BODY_LEN_m = 0.11;                              // capsule mid-section
 export const BODY_HALF_m = BODY_R_m + BODY_LEN_m / 2; // 0.10 — half the total height
-const HIDDEN_Y_m = -0.17; // centre: the whole body is below the rim, inside the pit
-const PEEK_Y_m = -0.01;   // centre: ~half the body clears the rim — it stays rooted in the hole
+const HIDDEN_Y_m = -0.17;      // centre: the whole body is below the rim, inside the pit
+export const PEEK_Y_m = -0.01; // centre at full peek: ~half the body clears the rim (groom mirrors this)
 const RISE_S = 0.25;
 const SINK_S = 0.22;
 

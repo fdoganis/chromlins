@@ -6,14 +6,20 @@
 // + tone mapping mirror src/rendering/RenderingManager.ts, and `view` has FOV
 // presets — a wide lens close up spreads a yaw fan, so judge backFan/foreFan
 // through the lens you'll ship on (the headset is ~100° H; see D11 / the
-// gamma-webxr-fov memory). `sim` has rise/sink playback, a floor grid, and a
-// toggle for the wireframe capsule (the no-go volume, Unicorn.tune.mane.margin).
+// gamma-webxr-fov memory).
+//
+// Default view is the whole floating body (design the full drape). `sim → in
+// hole` is the reality check: the unicorn only PEEKS from a hole in the game,
+// so most of the body — and the mane draping past the rim — is hidden in the
+// pit. That toggle drops it to PEEK_Y_m inside a real Hole (same
+// colorWrite:false occluder), so you see what actually shows in-game.
 import {
   Scene, Color, PerspectiveCamera, WebGLRenderer, HemisphereLight,
   DirectionalLight, Mesh, CapsuleGeometry, MeshBasicMaterial, Vector3, Clock,
-  GridHelper, NeutralToneMapping, SRGBColorSpace,
+  Group, GridHelper, NeutralToneMapping, SRGBColorSpace,
 } from 'three';
-import { BODY_HALF_m } from '../../src/world/Actor';
+import { BODY_HALF_m, PEEK_Y_m } from '../../src/world/Actor';
+import { Hole } from '../../src/world/Hole';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import GUI from 'lil-gui';
 import { Unicorn } from '../../src/world/Unicorn';
@@ -56,6 +62,11 @@ const grid = new GridHelper(0.5, 10, 0x445566, 0x223344);
 grid.position.y = -BODY_HALF_m;
 scene.add(grid);
 
+// a real Hole (same colorWrite:false occluder as the game) for the peek view
+const holeGroup = new Group();
+scene.add(holeGroup);
+new Hole(holeGroup, 0, 0);
+
 // the capsule the mane must not enter (BODY_R_m 0.045, BODY_LEN_m 0.11) — off
 // by default (the body mesh already shows the volume); on for a crisp boundary
 const cage = new Mesh(
@@ -74,14 +85,27 @@ if (shared) {
   } catch { /* bad param — ignore */ }
 }
 
+const sim = { inHole: false, ySpeed: 0, playback: false, hold: false, cage: false };
+
 let uni: Unicorn;
 function rebuild() {
   if (uni) scene.remove(uni.mesh);
   Unicorn.rebuildGeo();
   uni = new Unicorn(scene);
   uni.mesh.visible = true;
-  uni.mesh.position.set(0, 0, 0);
   uni.recolor('#f3ead7');
+  placeUnicorn();
+}
+// in-hole = the game's peek: centre at PEEK_Y_m, the occluder hides the pit, and
+// the camera drops to the game's ~30°-down look (the occlusion is angle-
+// dependent). off = whole body floating, near-level, for full-drape design.
+function placeUnicorn() {
+  uni.mesh.position.set(0, sim.inHole ? PEEK_Y_m : 0, 0);
+  holeGroup.visible = sim.inHole;
+  grid.visible = !sim.inHole;
+  if (sim.inHole) { camera.position.set(0, 0.5, 0.62); orbit.target.set(0, -0.02, 0); }
+  else { camera.position.set(0.32, 0.16, 0.6); orbit.target.set(0, 0.03, 0); }
+  orbit.update();
 }
 rebuild();
 
@@ -94,8 +118,8 @@ const fovC = view.add(camera, 'fov', 30, 110, 1).onChange(() => camera.updatePro
 for (const [label, v] of [['preview 55°', 55], ['game desktop 75°', 75], ['headset ~95°', 95]] as const)
   view.add({ [label]: () => fovC.setValue(v) }, label);
 
-const sim = { ySpeed: 0, playback: false, hold: false, cage: false };
 const sf = gui.addFolder('sim');
+sf.add(sim, 'inHole').name('in hole (peek — check what shows in-game)').onChange(placeUnicorn);
 sf.add(sim, 'playback').name('rise/sink playback'); // oscillates ySpeed so the spring mane cycles
 sf.add(sim, 'ySpeed', -3, 3, 0.1).name('rise/sink kick (manual)');
 sf.add(sim, 'hold').name('hold still (to orbit the back)'); // off = faces you, like in-game
@@ -129,3 +153,6 @@ addEventListener('resize', () => {
   camera.updateProjectionMatrix();
   renderer.setSize(innerWidth, innerHeight);
 });
+
+// handles for tests/automation to drive the studio (dev page only)
+Object.assign(window as unknown as Record<string, unknown>, { groom: { sim, camera, placeUnicorn, rebuild, get uni() { return uni; } } });
