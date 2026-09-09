@@ -9,11 +9,12 @@
 //
 // Reuses the gameplay loop: World's Actors for the rising bodies, the same
 // ray/proximity hit query, the same Sparkles burst.
-import { Ray, Vector3 } from 'three';
+import { Object3D, Ray, Vector3 } from 'three';
 import { State } from '../core/State';
 import { SelectCommand } from '../commands/SelectCommand';
 import { IntroState } from './IntroState';
 import { RunState } from './RunState';
+import { BODY_HALF_m } from '../world/Actor';
 import { RAINBOW, HUD_TEXT } from '../core/palette';
 import type { ClassOf } from '../types/ClassOf';
 import type { Game } from '../core/Game';
@@ -39,7 +40,7 @@ const _o = new Vector3();
 const _d = new Vector3();
 const _ray = new Ray();
 
-type Slot = { id: number; label: TextHandle; char: string; locked: boolean };
+type Slot = { id: number; label: TextHandle; carrier: Object3D; char: string; locked: boolean };
 
 export class NameEntryState extends State {
   #ctx: Game;
@@ -53,6 +54,7 @@ export class NameEntryState extends State {
   #slots: Slot[] = [];
   #okId = -1;
   #okLabel: TextHandle | undefined;
+  #okCarrier: Object3D | undefined;
   #prompt!: TextHandle;
   #t = 0;
   #exitIn = -1;               // >= 0 once OK is confirmed: seconds until we leave
@@ -85,20 +87,31 @@ export class NameEntryState extends State {
   #raiseSlot(i: number): void {
     const id = this.#world.spawnAtHole(HOLES[i], RAINBOW[PAIR[i][0]], Infinity, i);
     if (id < 0) return;
-    const label = this.#text.show(this.#char(), this.#actorAnchor(id), { color: '#ffffff' }); // readable on any rainbow body
-    this.#slots.push({ id, label, char: this.#char(), locked: false });
+    const { label, carrier } = this.#labelOn(id, this.#char());
+    this.#slots.push({ id, label, carrier, char: this.#char(), locked: false });
   }
 
   #raiseOk(): void {
     this.#okId = this.#world.spawnAtHole(HOLES[3], OK_HEX, Infinity, OK_TAG);
     if (this.#okId < 0) return;
-    this.#okLabel = this.#text.show('OK', this.#actorAnchor(this.#okId), { color: '#ffffff' });
+    const { label, carrier } = this.#labelOn(this.#okId, 'OK');
+    this.#okLabel = label;
+    this.#okCarrier = carrier;
   }
 
-  // The label rides the actor's mesh so it lifts with the rise; the voxel engine
-  // billboards it regardless.
-  #actorAnchor(id: number) {
-    return this.#world.actorMesh(id) ?? this.#render.anchor;
+  // A label parented straight to the actor mesh sits at the capsule's centre —
+  // buried in the body. Hang it on a carrier lifted just above the capsule top;
+  // the carrier rides the mesh's rise and the voxel engine billboards it.
+  #labelOn(id: number, text: string): { label: TextHandle; carrier: Object3D } {
+    const carrier = new Object3D();
+    carrier.position.y = BODY_HALF_m + 0.045;
+    (this.#world.actorMesh(id) ?? this.#render.anchor).add(carrier);
+    return { label: this.#text.show(text, carrier, { color: HUD_TEXT }), carrier };
+  }
+
+  #drop(label: TextHandle, carrier: Object3D): void {
+    this.#text.remove(label);
+    carrier.parent?.remove(carrier);
   }
 
   override update(delta: number): void {
@@ -160,8 +173,14 @@ export class NameEntryState extends State {
 
   #sinkOk(): void {
     this.#burst(this.#okId);
-    if (this.#okLabel) { this.#text.remove(this.#okLabel); this.#okLabel = undefined; }
+    this.#dropOk();
     this.#okId = -1;
+  }
+
+  #dropOk(): void {
+    if (this.#okLabel && this.#okCarrier) this.#drop(this.#okLabel, this.#okCarrier);
+    this.#okLabel = undefined;
+    this.#okCarrier = undefined;
   }
 
   #confirm(): void {
@@ -170,9 +189,9 @@ export class NameEntryState extends State {
     const name = this.#slots.map((s) => s.char).join('');
     this.#hi.submit(this.#score.value, name);
 
-    for (const s of this.#slots) { this.#burst(s.id); this.#text.remove(s.label); }
+    for (const s of this.#slots) { this.#burst(s.id); this.#drop(s.label, s.carrier); }
     this.#burst(this.#okId);
-    if (this.#okLabel) { this.#text.remove(this.#okLabel); this.#okLabel = undefined; }
+    this.#dropOk();
     this.#slots = [];
     this.#okId = -1;
 
@@ -194,11 +213,11 @@ export class NameEntryState extends State {
   }
 
   override exit(): void {
-    for (const s of this.#slots) { this.#text.remove(s.label); this.#world.despawnActor(s.id); }
+    for (const s of this.#slots) { this.#drop(s.label, s.carrier); this.#world.despawnActor(s.id); }
     this.#slots = [];
     if (this.#okId >= 0) this.#world.despawnActor(this.#okId);
     this.#okId = -1;
-    if (this.#okLabel) { this.#text.remove(this.#okLabel); this.#okLabel = undefined; }
+    this.#dropOk();
     this.#text.remove(this.#prompt);
     this.#exitIn = -1;
   }
