@@ -2,8 +2,11 @@ import { Mesh, MeshBasicMaterial, RingGeometry, Vector3 } from 'three';
 import { State } from '../core/State';
 import type { Game } from '../core/Game';
 import type { RenderingManager } from '../rendering/RenderingManager';
+import type { TextManager } from '../text/TextManager';
+import type { TextHandle } from '../text/ITextEngine';
 import { SelectCommand } from '../commands/SelectCommand';
 import { IntroState } from './IntroState';
+import { HUD_TEXT } from '../core/palette';
 
 const FLOOR_DIST_m = 0.6; // where the board lands when placed on the floor
 const DEV_SKIP_S = 8;     // dev/test only: no reticle ever → floor-place and go
@@ -14,6 +17,8 @@ const _UP = new Vector3(0, 1, 0);
 export class AnchorState extends State {
   #render: RenderingManager;
   #ctx: Game;
+  #text: TextManager;
+  #hint: TextHandle;
   #reticle: Mesh;
   #hitTestSource: XRHitTestSource | null | undefined;
   #requested = false;
@@ -26,6 +31,8 @@ export class AnchorState extends State {
     super();
     this.#render = ctx.rendering;
     this.#ctx = ctx;
+    this.#text = ctx.text;
+    this.#hint = ctx.text.show('TAP TO PLACE', ctx.rendering.hudAnchor, { color: HUD_TEXT, visible: false });
     this.#reticle = new Mesh(
       new RingGeometry(0.08, 0.1, 32).rotateX(-Math.PI / 2),
       new MeshBasicMaterial()
@@ -34,6 +41,13 @@ export class AnchorState extends State {
     this.#reticle.visible = false;
     this.#render.scene.add(this.#reticle); // tracking-space-rooted, NOT under anchor
     this.on(SelectCommand, this.#onSelect);
+  }
+
+  // Reticle + "TAP TO PLACE" hint move together: both on only when we have a
+  // real hit-test pose to aim at.
+  #showReticle(v: boolean) {
+    this.#reticle.visible = v;
+    this.#text.setVisible(this.#hint, v);
   }
 
   #onSelect = () => {
@@ -113,13 +127,13 @@ export class AnchorState extends State {
     if (this.#hitTestSource) {
       const hits = frame.getHitTestResults(this.#hitTestSource);
       const pose = hits.length > 0 ? hits[0].getPose(refSpace) : null;
-      this.#reticle.visible = !!pose; // visible only when we have a real pose
+      this.#showReticle(!!pose); // visible only when we have a real pose
       if (pose) { this.#sawReticle = true; this.#reticle.matrix.fromArray(pose.transform.matrix); }
     }
   }
 
   override enter() {
-    this.#reticle.visible = false;
+    this.#showReticle(false);
     this.#reticle.matrix.identity();
     this.#noHitTest = false;
     this.#sawReticle = false;
@@ -128,7 +142,7 @@ export class AnchorState extends State {
   }
 
   override exit() {
-    this.#reticle.visible = false;
+    this.#showReticle(false);
     this.#hitTestSource?.cancel();
     this.#hitTestSource = null;
     this.#requested = false;
