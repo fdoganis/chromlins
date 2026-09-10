@@ -18,13 +18,13 @@ test('name entry: whack three letters + OK, no errors, stays alive', async ({ pa
 
   const rising = await canvas.screenshot();
 
-  await page.locator('body').press('Space'); // lock A -> B rises
+  await page.keyboard.press('Space'); // lock A -> B rises (not locator('body').press — canvas fails its hit-test)
   await page.waitForTimeout(400);
   const afterFirstLock = await canvas.screenshot();
   expect(Buffer.compare(rising, afterFirstLock), 'locking a slot changed the scene').not.toBe(0);
 
   for (let i = 0; i < 3; i++) { // lock B, lock C (raises OK), whack OK
-    await page.locator('body').press('Space');
+    await page.keyboard.press('Space');
     await page.waitForTimeout(400);
   }
   await page.waitForTimeout(2500); // through the explosion + exit beat -> Intro

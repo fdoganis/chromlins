@@ -17,7 +17,7 @@ test('level 13: hidden hard mode runs clean', async ({ page }) => {
 
   const a = await canvas.screenshot();
   for (let i = 0; i < 40; i++) {
-    await page.locator('body').press('Space');
+    await page.keyboard.press('Space'); // not locator('body').press — the full-screen canvas fails its hit-test
     await page.waitForTimeout(120);
   }
   await page.waitForTimeout(1000);
