@@ -18,6 +18,8 @@
     "smoke": "node scripts/smoke.mjs",
     "fonts": "for f in square6 round6 thick8 minogram monogram; do node scripts/font-pack.mjs $f; done",
     "groom": "vite --open /tests/tools/groom.html",
+    "build:groom": "vite build --config vite.groom.config.js",
+    "build:pages": "npm run build && npm run build:groom",
     "test:e2e": "playwright test",
     "test:packed": "playwright test tests/packed.spec.ts"
   },

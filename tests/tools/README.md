@@ -83,16 +83,21 @@ file.
 # Unicorn groom studio
 
 `npm run groom` opens `groom.html` — a standalone page (never imported by
-`src/`, so zero bundle weight) for designing the unicorn's mane, horn and face.
-It renders one `Unicorn` scaled ~3×, a wireframe capsule cage (the volume
-strands must stay out of), and a lil-gui panel bound to every `Unicorn.tune`
-value.
+`src/`, so zero game-bundle weight) for designing the unicorn's mane, horn and
+face. It renders one `Unicorn`, a lil-gui panel bound to every `Unicorn.tune`
+value, and a floor grid. Also published — see **Published** below.
 
 ## Navigate
 
 - **Orbit** — drag to rotate, scroll to zoom. Turn to the back for the mane.
-- `sim → face camera` — off by default so the model holds still while you orbit.
-  On = it yaws toward you like in-game.
+- `sim → in hole` — the game's peek: drops the unicorn to `PEEK_Y_m` inside a
+  real hole + board occluder and swings the camera to the game's ~40°-down
+  look, so you see the slice that actually shows in-game (most of the body and
+  a long drape sit below the rim, hidden). Off by default — design the full
+  drape on the whole floating body.
+- `sim → hold still` — off by default so the model faces you like in-game
+  (`animate()` yaws it toward the camera). On = it holds still so you can orbit
+  round the back.
 - `sim → rise/sink playback` — oscillates the rise/sink so the spring mane
   cycles like an in-game appearance; `rise/sink kick (manual)` is the by-hand
   version.
@@ -141,6 +146,21 @@ clipboard. Open that link and the groom studio loads with that look. The same
 `?u=` param works on the **game** (`__DEV__` only, folds out of prod) — e.g.
 `?tweak&u=…` or `?run&u=…` shows the shared look at true scale / in AR without
 editing `Unicorn.tune`.
+
+## Published
+
+The studio ships to GitHub Pages next to the game:
+
+| | |
+|---|---|
+| game | `https://fdoganis.github.io/gamma/` |
+| groom studio | `https://fdoganis.github.io/gamma/groom.html` |
+
+`npm run build:pages` = `npm run build` (game → `dist/index.html`) + `npm run
+build:groom` (studio → `dist/groom.html`, one self-contained file via
+`vite.groom.config.js` — `__DEV__` forced true, `three` bundled). The deploy
+workflow runs `build:pages` and publishes `dist/`. `?u=` links point at
+whichever host you copied them from, so a share made on Pages opens on Pages.
 
 ## FOV — judge the fan through the shipping lens
 
