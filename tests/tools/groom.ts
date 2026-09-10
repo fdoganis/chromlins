@@ -15,8 +15,8 @@
 // colorWrite:false occluder), so you see what actually shows in-game.
 import {
   Scene, Color, PerspectiveCamera, WebGLRenderer, HemisphereLight,
-  DirectionalLight, Mesh, CapsuleGeometry, MeshBasicMaterial, Vector3, Clock,
-  Group, GridHelper, NeutralToneMapping, SRGBColorSpace,
+  DirectionalLight, Mesh, CapsuleGeometry, MeshBasicMaterial, RingGeometry,
+  DoubleSide, Vector3, Clock, Group, GridHelper, NeutralToneMapping, SRGBColorSpace,
 } from 'three';
 import { BODY_HALF_m, PEEK_Y_m } from '../../src/world/Actor';
 import { Hole } from '../../src/world/Hole';
@@ -62,10 +62,20 @@ const grid = new GridHelper(0.5, 10, 0x445566, 0x223344);
 grid.position.y = -BODY_HALF_m;
 scene.add(grid);
 
-// a real Hole (same colorWrite:false occluder as the game) for the peek view
+// the peek view: a real Hole (dark pit + brim) PLUS a big colorWrite:false ring
+// standing in for the game's continuous board sheet — in-game the 8 brims fuse
+// into one occluder, so a strand draping past its own hole's edge is clipped.
+// Without this, groom shows strands the game hides.
 const holeGroup = new Group();
 scene.add(holeGroup);
 new Hole(holeGroup, 0, 0);
+const boardOcc = new Mesh(
+  new RingGeometry(0.056, 0.6, 48).rotateX(-Math.PI / 2),
+  new MeshBasicMaterial({ colorWrite: false, side: DoubleSide }),
+);
+boardOcc.position.y = -0.002;
+boardOcc.renderOrder = -10;
+holeGroup.add(boardOcc);
 
 // the capsule the mane must not enter (BODY_R_m 0.045, BODY_LEN_m 0.11) — off
 // by default (the body mesh already shows the volume); on for a crisp boundary
