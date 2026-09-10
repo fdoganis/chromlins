@@ -94,8 +94,19 @@ function taperedTube(pts: Vector3[], rootR: number, taper: number): TubeGeometry
   return g;
 }
 
+// backCrest 0: all roots on the crown, fanned across X (a topknot). backCrest 1:
+// roots march down the neck crest — x≈0, Y from the crown toward the nape, Z
+// toward the back of the head — a horse mane running along the back. crestDrop /
+// crestBack size that ridge; only in play when backCrest > 0.
 function backRoot(d: number, m: typeof Unicorn.tune.mane): Vector3 {
-  return new Vector3(d * m.xStep, BODY_HALF_m, m.backRootZ);           // on the crown, just behind the horn
+  const t = m.backCrest;
+  const span = Math.max(1, m.backCount - 1);
+  const u = (d + span / 2) / span; // 0..1 along the row, front → back
+  return new Vector3(
+    d * m.xStep * (1 - t),
+    BODY_HALF_m - t * u * m.crestDrop,
+    m.backRootZ - t * u * m.crestBack,
+  );
 }
 function foreRoot(d: number, m: typeof Unicorn.tune.mane): Vector3 {
   return new Vector3(d * m.xStep, BODY_HALF_m * m.foreRootYFrac, m.foreRootZ); // forehead
@@ -126,7 +137,8 @@ function buildManeGeos(): void {
     strands.push({ geo: taperedTube(sDrape(root, yaw, back, m), m.radius, m.taper), root, yaw, back });
   };
   const bmid = (m.backCount - 1) / 2;
-  for (let i = 0; i < m.backCount; i++) add(backRoot(i - bmid, m), (i - bmid) * m.backFan, true);
+  // as backCrest → 1 the roots line up along the back, so drop the X-fan too
+  for (let i = 0; i < m.backCount; i++) add(backRoot(i - bmid, m), (i - bmid) * m.backFan * (1 - m.backCrest), true);
   const fmid = (m.foreCount - 1) / 2;
   for (let i = 0; i < m.foreCount; i++) add(foreRoot(i - fmid, m), (i - fmid) * m.foreFan, false);
 }
@@ -147,6 +159,9 @@ export class Unicorn extends Actor {
       "backFan": -0.25,
       "foreFan": 0.25,
       "xStep": 0.002,
+      "backCrest": 0,
+      "crestDrop": 0.09,
+      "crestBack": 0.05,
       "backRootZ": 0.008,
       "foreRootYFrac": 0.82,
       "foreRootZ": 0.005,
