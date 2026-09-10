@@ -151,21 +151,21 @@ export class Unicorn extends Actor {
     "mane": {
       "backCount": 7,
       "foreCount": 7,
-      "radius": 0.018,
+      "radius": 0.015,
       "taper": 1,
-      "len": 0.2,
-      "foreLen": 0.07,
+      "len": 0.09,
+      "foreLen": 0.06,
       "lift": -0.8,
       "drop": 2,
-      "sBend": 0.5,
-      "backFan": -0.25,
-      "foreFan": 0.25,
-      "xStep": 0.002,
-      "backCrest": 0,
-      "crestDrop": 0.09,
+      "sBend": 0.9,
+      "backFan": 0,
+      "foreFan": 0.1,
+      "xStep": 0.001,
+      "backCrest": 0.8,
+      "crestDrop": 0.045,
       "crestBack": 0.05,
-      "crestSide": 0,
-      "backRootZ": 0.008,
+      "crestSide": -2,
+      "backRootZ": 0.0085,
       "foreRootYFrac": 0.82,
       "foreRootZ": 0.005,
       "margin": 0.008,
@@ -187,13 +187,14 @@ export class Unicorn extends Actor {
       "eyeYFrac": 0.5,
       "eyeZ": 0.038,
       "cheekX": 0.026,
-      "cheekYFrac": 0.32,
-      "cheekZ": 0.033,
-      "cheekFlat": 0.6,
-      "muzzleYFrac": 0.18,
-      "muzzleZ": 0.04
+      "cheekYFrac": 0.35,
+      "cheekZ": 0.03,
+      "cheekFlat": 1,
+      "muzzleYFrac": 0.27,
+      "muzzleZ": 0.03
     }
-  };
+  }
+    ;
 
   override decoy = true;
 
