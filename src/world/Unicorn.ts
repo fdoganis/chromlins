@@ -137,8 +137,10 @@ function buildManeGeos(): void {
     strands.push({ geo: taperedTube(sDrape(root, yaw, back, m), m.radius, m.taper), root, yaw, back });
   };
   const bmid = (m.backCount - 1) / 2;
-  // as backCrest → 1 the roots line up along the back, so drop the X-fan too
-  for (let i = 0; i < m.backCount; i++) add(backRoot(i - bmid, m), (i - bmid) * m.backFan * (1 - m.backCrest), true);
+  // as backCrest → 1 the roots line up along the back, so drop the X-fan and add
+  // a constant `crestSide` yaw so the ridge falls to one side (a real horse mane)
+  for (let i = 0; i < m.backCount; i++)
+    add(backRoot(i - bmid, m), (i - bmid) * m.backFan * (1 - m.backCrest) + m.crestSide * m.backCrest, true);
   const fmid = (m.foreCount - 1) / 2;
   for (let i = 0; i < m.foreCount; i++) add(foreRoot(i - fmid, m), (i - fmid) * m.foreFan, false);
 }
@@ -162,6 +164,7 @@ export class Unicorn extends Actor {
       "backCrest": 0,
       "crestDrop": 0.09,
       "crestBack": 0.05,
+      "crestSide": 0,
       "backRootZ": 0.008,
       "foreRootYFrac": 0.82,
       "foreRootZ": 0.005,

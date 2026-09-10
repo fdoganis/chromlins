@@ -113,6 +113,7 @@ value.
 | `sBend` | the mid-strand undulation that makes it an S. `0` = plain arc. |
 | `backFan` / `foreFan` | yaw spread across strands (rad). `0` = one plane; higher = wider fan around the head. |
 | `backCrest` | `0` = back roots fan across the crown (topknot); `1` = roots march a ridge down the back of the head — a horse mane. `crestDrop` / `crestBack` size that ridge. Drop `backFan` toward 0 with it. |
+| `crestSide` | with `backCrest > 0`: a constant yaw (rad) so the ridge falls to one side — `~+1.3` / `~-1.3` for right / left, `0` straight back. |
 | `xStep` | root spacing across the crown. |
 | `radius` / `taper` | tube thickness at the root; `taper 1` = pointed tip, `0` = constant. |
 | `margin` | clearance every sample is pushed off the body — raise if a strand clips the capsule in motion. |
