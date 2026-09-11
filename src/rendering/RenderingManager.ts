@@ -40,7 +40,7 @@ export class RenderingManager {
 
     const btn = XRButton.createButton(this.renderer, {
       requiredFeatures: ['hit-test'],
-      optionalFeatures: ['hand-tracking', 'depth-sensing'],
+      optionalFeatures: ['hand-tracking'],
       depthSensing: { usagePreference: ['gpu-optimized'], dataFormatPreference: [] }
     });
     btn.style.backgroundColor = 'skyblue';
