@@ -17,7 +17,8 @@ import {
   RingGeometry,
   DoubleSide,
   BackSide,
-  FrontSide
+  FrontSide,
+  ReplaceStencilOp
 } from 'three';
 import type { Object3D } from 'three';
 
@@ -37,10 +38,21 @@ const BRIM_GEO = new RingGeometry(HOLE_R_m, BRIM_R_m, 28).rotateX(-Math.PI / 2);
 const CROWN_GEO = new CylinderGeometry(CROWN_R_m, CROWN_R_m, PIT_DEPTH_m, 24, 1, true);
 const PIT_GEO = new CylinderGeometry(HOLE_R_m, HOLE_R_m, PIT_DEPTH_m, 24, 1, true);
 const DISC_GEO = new CircleGeometry(CROWN_R_m, 20).rotateX(-Math.PI / 2);
+const MOUTH_GEO = new CircleGeometry(HOLE_R_m, 24).rotateX(-Math.PI / 2); // exactly the visible opening
 
 const OCC_MAT = new MeshBasicMaterial({ colorWrite: false, side: DoubleSide });
 const PIT_MAT = new MeshPhongMaterial({ color: PIT_WALL, emissive: 0x141418, side: BackSide, shininess: 6 }); // lit → rim-to-floor gradient, never full black
-const FLOOR_MAT = new MeshBasicMaterial({ color: PIT_DARK, side: FrontSide }); // faces up after rotateX
+const FLOOR_MAT = new MeshPhongMaterial({ color: PIT_DARK, emissive: 0x050508, side: FrontSide, shininess: 4 }); // lit like the wall, so a crossing shadow reads into the pit instead of stopping dead at the rim
+// Marks the true opening in the stencil buffer only (no color/depth write) so
+// RenderingManager's shadow-catcher plane — which knows nothing about holes,
+// and sits nearer than everything in the pit — can be told to skip drawing
+// there. Without this the catcher always wins the depth test at the opening
+// and caps it with a translucent disc wherever a shadow crosses (looks like
+// glass over the hole). Leaves the brim ring alone — shadows still show there.
+const MOUTH_MAT = new MeshBasicMaterial({
+  colorWrite: false, depthWrite: false, depthTest: false,
+  stencilWrite: true, stencilRef: 1, stencilZPass: ReplaceStencilOp
+});
 
 const OCC_ORDER = -10; // depth laid down before the actors (default order)
 const PIT_ORDER = -5;  // dark walls fill the opening, after the occluder
@@ -67,13 +79,18 @@ export class Hole {
 
     const pit = new Mesh(PIT_GEO, PIT_MAT);
     pit.position.set(x, -PIT_DEPTH_m / 2, z);
+    pit.receiveShadow = true;
     const floor = new Mesh(DISC_GEO, FLOOR_MAT);
     floor.position.set(x, -PIT_DEPTH_m + 0.003, z);
+    floor.receiveShadow = true;
 
-    for (const m of [brim, crown, base]) m.renderOrder = OCC_ORDER;
+    const mouth = new Mesh(MOUTH_GEO, MOUTH_MAT);
+    mouth.position.set(x, 0, z);
+
+    for (const m of [brim, crown, base, mouth]) m.renderOrder = OCC_ORDER;
     for (const m of [pit, floor]) m.renderOrder = PIT_ORDER;
 
-    this.#fixtures = [brim, crown, base, pit, floor];
+    this.#fixtures = [brim, crown, base, pit, floor, mouth];
     root.add(...this.#fixtures);
   }
 

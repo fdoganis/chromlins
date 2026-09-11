@@ -10,7 +10,8 @@ import {
   ShadowMaterial,
   Group,
   NeutralToneMapping,
-  SRGBColorSpace
+  SRGBColorSpace,
+  NotEqualStencilFunc
 } from 'three';
 import { XRButton } from 'three/addons/webxr/XRButton.js';
 
@@ -27,7 +28,7 @@ export class RenderingManager {
 
 
   constructor() {
-    this.renderer = new WebGLRenderer({ antialias: true, alpha: true });
+    this.renderer = new WebGLRenderer({ antialias: true, alpha: true, stencil: true }); // stencil: Hole.ts uses it to cut the shadow-catcher out of each pit mouth
     this.renderer.toneMapping = NeutralToneMapping; // Khronos PBR Neutral — compresses only out-of-gamut highlights, keeps hue + saturation
     this.renderer.outputColorSpace = SRGBColorSpace;
 
@@ -111,6 +112,15 @@ export class RenderingManager {
     const catcher = new Mesh(new PlaneGeometry(2, 2), new ShadowMaterial({ opacity: 0.5 }));
     catcher.rotation.x = -Math.PI / 2;
     catcher.receiveShadow = true;
+    // The catcher doesn't know holes exist, and being nearer than the deep pit
+    // geometry it would otherwise always win the depth test and cap a hole's
+    // opening with a translucent disc wherever a shadow crosses it (looks like
+    // glass). Hole.ts marks each true opening's footprint in the stencil
+    // buffer; skip drawing the catcher there. Untouched everywhere else — the
+    // brim ring around a hole still shows shadows normally.
+    catcher.material.stencilWrite = true;
+    catcher.material.stencilFunc = NotEqualStencilFunc;
+    catcher.material.stencilRef = 1;
     this.anchor.add(catcher);
 
     this.renderer.xr.addEventListener('sessionstart', this.#onXRStart);
