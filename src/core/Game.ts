@@ -27,6 +27,7 @@ import { SegmentTextEngine } from '../text/engines/segment/SegmentTextEngine';
 import { TEXT_ENGINE, BUILD } from '../game.config';
 import { HUD_TEXT } from './palette';
 import { applyTuneShare } from '../world/Unicorn';
+import { Mace } from '../rendering/Mace';
 import type { State } from './State';
 import type { ClassOf } from '../types/ClassOf';
 
@@ -45,6 +46,8 @@ export class Game {
   #hiLabel: TextHandle;
   #hiShown = -1;
   #hiName = '';
+  #maceLeft?: Mace; // BUILD === 'deluxe' only — assigned in #bindInput()
+  #maceRight?: Mace;
 
   change(state: ClassOf<State>): void { this.#sm.change(state); }
 
@@ -125,6 +128,15 @@ export class Game {
     handLeft.bind('pinchend', new SelectCommand(handLeft.node, 'left'));
     handRight.bind('pinchend', new SelectCommand(handRight.node, 'right'));
 
+    // Pure affordance, no gameplay tie: a mace swings on that controller's own
+    // select. BUILD === 'deluxe' only — folds out of the light/js13k build.
+    if (BUILD === 'deluxe') {
+      this.#maceLeft = new Mace(xrLeft.node);
+      this.#maceRight = new Mace(xrRight.node);
+      xrLeft.node.addEventListener('select', () => this.#maceLeft!.swing());
+      xrRight.node.addEventListener('select', () => this.#maceRight!.swing());
+    }
+
     // The XR controller trigger already emits `select` above; a real (non-XR)
     // gamepad still routes through gamepadPool.
     gamepadPool.onConnect((pad) => pad.bind(0, new SelectCommand(randomTransform())));
@@ -138,6 +150,7 @@ export class Game {
   update(delta: number, frame?: XRFrame) {
     this.#sm.update(delta, frame);
     this.text.update(delta); // labels are global, not owned by the active state
+    if (BUILD === 'deluxe') { this.#maceLeft!.update(delta); this.#maceRight!.update(delta); }
 
     const hi = Math.max(this.hiScore.score, this.score.value);
     const name = this.hiScore.name;
