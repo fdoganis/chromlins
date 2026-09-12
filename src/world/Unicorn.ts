@@ -6,8 +6,9 @@
 // starts on the crown / forehead, kicks up, crests over the head and hangs down
 // the back, then curls its tip back toward the body — and every sample is pushed
 // out of the capsule by `margin` so nothing ends up buried. Rigid tube strands
-// on cheap angular springs. Tune everything live in the groom studio
-// (tests/tools/groom.html, `npm run groom`).
+// on cheap angular springs. Shape/motion knobs are baked to their final,
+// locked literal values for this fork's byte budget — no more `Unicorn.tune`
+// object; tune the look in gamma's groom studio instead, then re-bake here.
 import {
   Mesh, MeshPhongMaterial, MeshBasicMaterial, CylinderGeometry, SphereGeometry,
   TubeGeometry, CatmullRomCurve3, Vector3, MathUtils, type Object3D,
@@ -53,22 +54,22 @@ function capsuleClamp(p: Vector3, margin: number): void {
 
 // The S-curve rest path for one strand, returned root-relative (starts at the
 // origin). `yaw` fans it around Y; `back` flips the drape to the rear.
-function sDrape(root: Vector3, yaw: number, back: boolean, m: typeof Unicorn.tune.mane): Vector3[] {
-  const len = back ? m.len : m.foreLen;
+function sDrape(root: Vector3, yaw: number, back: boolean): Vector3[] {
+  const len = back ? 0.09 : 0.06; // len : foreLen
   const seg = len / DRAPE_N;
   const H = new Vector3(0, 0, back ? -1 : 1).applyAxisAngle(_up, yaw); // fanned horizontal aim
   const abs = root.clone();                 // body-local absolute position, walked forward
   const out = [new Vector3()];              // root-relative
-  let pitch = m.lift;                       // radians, + = up
+  let pitch = -0.8;                         // radians, + = up (lift)
   for (let i = 1; i <= DRAPE_N; i++) {
     const u = i / DRAPE_N;
     // start pitched up (lift), sweep down to -drop by the tip, one undulation (sBend) => an S
-    const target = m.lift - (m.lift + m.drop) * u + m.sBend * Math.sin(u * Math.PI * 1.6);
+    const target = -0.8 - (-0.8 + 2) * u + 0.9 * Math.sin(u * Math.PI * 1.6); // lift, drop, sBend
     pitch += (target - pitch) * 0.6;         // smooth the corner
     _step.copy(H).multiplyScalar(Math.cos(pitch) * seg);
     _step.y += Math.sin(pitch) * seg;
     abs.add(_step);
-    capsuleClamp(abs, m.margin);
+    capsuleClamp(abs, 0.008); // margin
     out.push(abs.clone().sub(root));
   }
   return out;
@@ -94,18 +95,18 @@ function taperedTube(pts: Vector3[], rootR: number, taper: number): TubeGeometry
 // roots march down the neck crest — x≈0, Y from the crown toward the nape, Z
 // toward the back of the head — a horse mane running along the back. crestDrop /
 // crestBack size that ridge; only in play when backCrest > 0.
-function backRoot(d: number, m: typeof Unicorn.tune.mane): Vector3 {
-  const t = m.backCrest;
-  const span = Math.max(1, m.backCount - 1);
+function backRoot(d: number): Vector3 {
+  const t = 0.8; // backCrest
+  const span = Math.max(1, 7 - 1); // backCount - 1
   const u = (d + span / 2) / span; // 0..1 along the row, front → back
   return new Vector3(
-    d * m.xStep * (1 - t),
-    BODY_HALF_m - t * u * m.crestDrop,
-    m.backRootZ - t * u * m.crestBack,
+    d * 0.001 * (1 - t), // xStep
+    BODY_HALF_m - t * u * 0.045, // crestDrop
+    0.0085 - t * u * 0.05, // backRootZ, crestBack
   );
 }
-function foreRoot(d: number, m: typeof Unicorn.tune.mane): Vector3 {
-  return new Vector3(d * m.xStep, BODY_HALF_m * m.foreRootYFrac, m.foreRootZ); // forehead
+function foreRoot(d: number): Vector3 {
+  return new Vector3(d * 0.001, BODY_HALF_m * 0.82, 0.005); // forehead (xStep, foreRootYFrac, foreRootZ)
 }
 
 function twistedHornGeo(h: number, baseR: number, turns: number): CylinderGeometry {
@@ -119,78 +120,26 @@ function twistedHornGeo(h: number, baseR: number, turns: number): CylinderGeomet
   return g;
 }
 
-// module-level so groom's Unicorn.rebuildGeo() can swap them; every Unicorn
-// shares them.
+// module-level: every Unicorn shares them.
 let hornGeo = twistedHornGeo(0.075, 0.02, 2.5);
 let strands: { geo: TubeGeometry; root: Vector3; yaw: number; back: boolean }[] = [];
 
 function buildManeGeos(): void {
   for (const s of strands) s.geo.dispose();
   strands = [];
-  const m = Unicorn.tune.mane;
   const add = (root: Vector3, yaw: number, back: boolean) => {
-    strands.push({ geo: taperedTube(sDrape(root, yaw, back, m), m.radius, m.taper), root, yaw, back });
+    strands.push({ geo: taperedTube(sDrape(root, yaw, back), 0.015, 1), root, yaw, back }); // radius, taper
   };
-  const bmid = (m.backCount - 1) / 2;
+  const bmid = (7 - 1) / 2; // backCount
   // as backCrest → 1 the roots line up along the back, so drop the X-fan and add
   // a constant `crestSide` yaw so the ridge falls to one side (a real horse mane)
-  for (let i = 0; i < m.backCount; i++)
-    add(backRoot(i - bmid, m), (i - bmid) * m.backFan * (1 - m.backCrest) + m.crestSide * m.backCrest, true);
-  const fmid = (m.foreCount - 1) / 2;
-  for (let i = 0; i < m.foreCount; i++) add(foreRoot(i - fmid, m), (i - fmid) * m.foreFan, false);
+  for (let i = 0; i < 7; i++) // backCount
+    add(backRoot(i - bmid), (i - bmid) * 0 * (1 - 0.8) + -2 * 0.8, true); // backFan, backCrest, crestSide
+  const fmid = (7 - 1) / 2; // foreCount
+  for (let i = 0; i < 7; i++) add(foreRoot(i - fmid), (i - fmid) * 0.1, false); // foreCount, foreFan
 }
 
 export class Unicorn extends Actor {
-  // Config, on the class. groom binds lil-gui folders to mane / horn / face.
-  static tune = {
-    "mane": {
-      "backCount": 7,
-      "foreCount": 7,
-      "radius": 0.015,
-      "taper": 1,
-      "len": 0.09,
-      "foreLen": 0.06,
-      "lift": -0.8,
-      "drop": 2,
-      "sBend": 0.9,
-      "backFan": 0,
-      "foreFan": 0.1,
-      "xStep": 0.001,
-      "backCrest": 0.8,
-      "crestDrop": 0.045,
-      "crestBack": 0.05,
-      "crestSide": -2,
-      "backRootZ": 0.0085,
-      "foreRootYFrac": 0.82,
-      "foreRootZ": 0.005,
-      "margin": 0.008,
-      "stiff": 80,
-      "damp": 20,
-      "kick": 2,
-      "idle": 0.1
-    },
-    "horn": {
-      "turns": 2.5,
-      "height": 0.075,
-      "baseR": 0.02,
-      "tiltX": 0.3,
-      "posY": 0.027,
-      "posZ": 0.017
-    },
-    "face": {
-      "eyeX": 0.016,
-      "eyeYFrac": 0.5,
-      "eyeZ": 0.038,
-      "cheekX": 0.026,
-      "cheekYFrac": 0.35,
-      "cheekZ": 0.03,
-      "cheekFlat": 1,
-      "muzzleYFrac": 0.27,
-      "muzzleZ": 0.03
-    }
-  }
-    ;
-
   override decoy = true;
 
   #mane: ManeUpdate;
@@ -199,27 +148,26 @@ export class Unicorn extends Actor {
   constructor(root: Object3D) {
     super(root);
     if (!strands.length) buildManeGeos();
-    const f = Unicorn.tune.face;
     const body = this.mesh;
 
     for (const sx of [-1, 1]) {
       const eye = new Mesh(eyeGeo, BLACK_EYE_MAT);
-      eye.position.set(sx * f.eyeX, BODY_HALF_m * f.eyeYFrac, f.eyeZ);
+      eye.position.set(sx * 0.016, BODY_HALF_m * 0.5, 0.038); // eyeX, eyeYFrac, eyeZ
       body.add(eye);
       const cheek = new Mesh(cheekGeo, pinkMat);
-      cheek.position.set(sx * f.cheekX, BODY_HALF_m * f.cheekYFrac, f.cheekZ);
-      cheek.scale.set(1, 1, f.cheekFlat); // flattened -> a painted blush spot, not a ball
+      cheek.position.set(sx * 0.026, BODY_HALF_m * 0.35, 0.03); // cheekX, cheekYFrac, cheekZ
+      cheek.scale.set(1, 1, 1); // flattened -> a painted blush spot, not a ball (cheekFlat)
       body.add(cheek);
     }
     // nose + mouth: one flattened pink sphere, centred, low on the face
     const muzzle = new Mesh(muzzleGeo, pinkMat);
-    muzzle.position.set(0, BODY_HALF_m * f.muzzleYFrac, f.muzzleZ);
-    muzzle.scale.set(1, 0.7, f.cheekFlat); // barely protruding, a touch squashed vertically
+    muzzle.position.set(0, BODY_HALF_m * 0.27, 0.03); // muzzleYFrac, muzzleZ
+    muzzle.scale.set(1, 0.7, 1); // barely protruding, a touch squashed vertically (cheekFlat)
     body.add(muzzle);
 
     const horn = new Mesh(hornGeo, pinkMat);
-    horn.position.set(0, BODY_HALF_m + Unicorn.tune.horn.posY, Unicorn.tune.horn.posZ);
-    horn.rotation.x = Unicorn.tune.horn.tiltX;
+    horn.position.set(0, BODY_HALF_m + 0.027, 0.017); // horn.posY, horn.posZ
+    horn.rotation.x = 0.3; // horn.tiltX
     body.add(horn);
 
     this.#mane = buildSpringMane(body);
@@ -232,21 +180,12 @@ export class Unicorn extends Actor {
     this.mesh.rotation.y = Math.atan2(_look.x, _look.z);
     this.#mane(delta, ySpeed, this.#t);
   }
-
-  // groom only: rebuild the horn + all strand geometry after a shape knob.
-  static rebuildGeo(): void {
-    if (!__DEV__) return;
-    hornGeo.dispose();
-    hornGeo = twistedHornGeo(Unicorn.tune.horn.height, Unicorn.tune.horn.baseR, Unicorn.tune.horn.turns);
-    buildManeGeos();
-  }
 }
 
 // ---- 'spring' mane: one rigid S-tube per strand on a bounded angular spring ----
 type Spring = { mesh: Object3D; phase: number; ang: number; vel: number };
 
 function buildSpringMane(body: Object3D): ManeUpdate {
-  const k = Unicorn.tune.mane;
   const springs: Spring[] = strands.map((st, i) => {
     const mesh = new Mesh(st.geo, maneMat[i % maneMat.length]);
     mesh.position.copy(st.root);
@@ -255,10 +194,10 @@ function buildSpringMane(body: Object3D): ManeUpdate {
   });
   return (dt, ySpeed, t) => {
     for (const s of springs) {
-      const accel = -s.ang * k.stiff + ySpeed * k.kick;
-      s.vel = (s.vel + accel * dt) / (1 + k.damp * dt); // implicit damping — unconditionally stable
+      const accel = -s.ang * 80 + ySpeed * 2; // stiff, kick
+      s.vel = (s.vel + accel * dt) / (1 + 20 * dt); // implicit damping — unconditionally stable (damp)
       s.ang = MathUtils.clamp(s.ang + s.vel * dt, -0.5, 0.8); // bounded so the swing never buries the tip
-      s.mesh.rotation.x = -s.ang + Math.sin(t * 3 + s.phase) * k.idle;
+      s.mesh.rotation.x = -s.ang + Math.sin(t * 3 + s.phase) * 0.1; // idle
     }
   };
 }
