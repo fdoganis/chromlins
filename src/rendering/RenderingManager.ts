@@ -14,6 +14,48 @@ import {
   NotEqualStencilFunc
 } from 'three';
 import { XRButton } from 'three/addons/webxr/XRButton.js';
+import { getQuery } from '../core/Utils';
+
+// __DEV__ only: a device with no immersive-ar support falls back to
+// immersive-vr on its own (XRButton's default behavior), but the real flow is
+// hard to reach without such a device on hand. `?xr=ar` / `?xr=vr` forces the
+// mode by bypassing XRButton's own try-AR-then-VR detection, so the fallback
+// path (AnchorState already floor-places when there's no hit-test source) can
+// be exercised on any AR-capable dev machine or the emulator.
+function forcedXRButton(renderer: WebGLRenderer, mode: XRSessionMode, sessionInit: XRSessionInit): HTMLElement {
+  const label = mode === 'immersive-ar' ? 'AR' : 'VR';
+  const btn = document.createElement('button');
+  btn.textContent = `START ${label} (forced)`;
+  Object.assign(btn.style, {
+    position: 'absolute', bottom: '20px', left: 'calc(50% - 80px)',
+    padding: '12px 6px', border: '1px solid #fff', borderRadius: '4px',
+    background: 'rgba(0,0,0,0.1)', color: '#fff', font: 'normal 13px sans-serif', cursor: 'pointer'
+  });
+  // XRButton.js quietly adds these three to whatever optionalFeatures you pass
+  // it before requesting a session — three's WebXRManager.setSession() does a
+  // session.requestReferenceSpace('local-floor') internally and that rejects
+  // (silently, if unawaited) without 'local-floor' having been negotiated.
+  const sessionOptions: XRSessionInit = {
+    ...sessionInit,
+    optionalFeatures: ['local-floor', 'bounded-floor', 'layers', ...(sessionInit.optionalFeatures ?? [])]
+  };
+  let session: XRSession | null = null;
+  btn.onclick = () => {
+    if (session) { session.end(); return; }
+    navigator.xr!.requestSession(mode, sessionOptions).then(async (s) => {
+      session = s;
+      await renderer.xr.setSession(s);
+      btn.textContent = 'STOP XR';
+      s.addEventListener('end', () => { session = null; btn.textContent = `START ${label} (forced)`; });
+    }).catch((err) => {
+      btn.textContent = `${label} NOT SUPPORTED`;
+      console.warn(err);
+      session?.end();
+      session = null;
+    });
+  };
+  return btn;
+}
 
 export class RenderingManager {
   scene: Scene;
@@ -39,11 +81,19 @@ export class RenderingManager {
     // TODO: CHECK if the following line is important, and if it should rather be written in HTML / CSS
     //this.renderer.domElement.style.touchAction = 'none'; // stop the browser's own pinch/scroll competing with taps
 
-    const btn = XRButton.createButton(this.renderer, {
-      requiredFeatures: ['hit-test'],
-      optionalFeatures: ['hand-tracking'],
+    // hit-test is optional, not required: a device with no AR support falls
+    // back to immersive-vr (XRButton's own behavior), and requiring hit-test
+    // would make that fallback session request fail outright — immersive-vr
+    // sessions don't support it. AnchorState already floor-places the board
+    // when no hit-test source ever shows up.
+    const sessionInit: XRSessionInit = {
+      optionalFeatures: ['hit-test', 'hand-tracking'],
       depthSensing: { usagePreference: ['gpu-optimized'], dataFormatPreference: [] }
-    });
+    };
+    const forcedMode = __DEV__ ? ({ ar: 'immersive-ar', vr: 'immersive-vr' } as const)[getQuery().xr as 'ar' | 'vr'] : undefined;
+    const btn = forcedMode && navigator.xr
+      ? forcedXRButton(this.renderer, forcedMode, sessionInit)
+      : XRButton.createButton(this.renderer, sessionInit);
     btn.style.backgroundColor = 'skyblue';
     document.body.appendChild(btn);
 
