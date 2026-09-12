@@ -50,17 +50,35 @@ export class AnchorState extends State {
     this.#text.setVisible(this.#hint, v);
   }
 
-  #onSelect = () => {
-    if (this.#done || !this.#reticle.visible) return;
-    // Keep only the hit position. The hit-test pose's rotation about the surface
-    // normal is runtime-defined — Quest yaws it ~180° from where the emulator /
-    // ARCore put it, which spun the whole board (actors facing away, rainbow in
-    // front). Ignore the pose orientation and face the player instead.
-    this.#reticle.matrix.decompose(
-      this.#render.anchor.position,
-      this.#render.anchor.quaternion,
-      this.#render.anchor.scale
-    );
+  // No hit-test source at all (VR, or an AR device that granted none): swap
+  // the hint to wording that fits any select source, not just a tap.
+  #setNoHitTest() {
+    this.#noHitTest = true;
+    this.#text.setText(this.#hint, 'REST ON TABLE - SELECT');
+    this.#text.setVisible(this.#hint, true);
+  }
+
+  #onSelect = (cmd: SelectCommand) => {
+    if (this.#done) return;
+    if (this.#reticle.visible) {
+      // Keep only the hit position. The hit-test pose's rotation about the surface
+      // normal is runtime-defined — Quest yaws it ~180° from where the emulator /
+      // ARCore put it, which spun the whole board (actors facing away, rainbow in
+      // front). Ignore the pose orientation and face the player instead.
+      this.#reticle.matrix.decompose(
+        this.#render.anchor.position,
+        this.#render.anchor.quaternion,
+        this.#render.anchor.scale
+      );
+    } else if (this.#noHitTest) {
+      // No hit-test source (VR, or an AR device that granted none): whatever
+      // fired this select — hand pinch or controller trigger, no distinction
+      // needed — is resting near the real table. Use its height, not a guess.
+      this.#placeOnFloor(_v.setFromMatrixPosition(cmd.transform.matrixWorld).y - 0.02);
+      return;
+    } else {
+      return; // no pose yet, and hit-test might still show up
+    }
     this.#faceCamera();
     this.#advance();
   };
@@ -75,13 +93,14 @@ export class AnchorState extends State {
     a.scale.set(1, 1, 1);
   }
 
-  // No usable hit-test: put the board on the floor, ahead, facing forward, and
-  // let the player reach/aim at it. local-floor space → camera.y ≈ standing
-  // height so the floor is y=0; a headset-origin space → camera.y ≈ 0 so it's
-  // ~1.6 m below (per the WebXR default eye height).
-  #placeOnFloor() {
+  // No usable hit-test: put the board ahead, facing forward, and let the player
+  // reach/aim at it. `y`, when given, is a real measured height (see #onSelect);
+  // otherwise guess the floor — local-floor space → camera.y ≈ standing height
+  // so the floor is y=0, a headset-origin space → camera.y ≈ 0 so it's ~1.6 m
+  // below (per the WebXR default eye height).
+  #placeOnFloor(y?: number) {
     const camY = this.#render.camera.position.y;
-    this.#render.anchor.position.set(0, camY > 0.8 ? 0 : camY - 1.6, -FLOOR_DIST_m);
+    this.#render.anchor.position.set(0, y ?? (camY > 0.8 ? 0 : camY - 1.6), -FLOOR_DIST_m);
     this.#faceCamera();
     this.#advance();
   }
@@ -109,11 +128,11 @@ export class AnchorState extends State {
       session.requestReferenceSpace('viewer')
         .then((viewerSpace: XRReferenceSpace) => {
           const hitTestPromise = session.requestHitTestSource?.({ space: viewerSpace });
-          if (!hitTestPromise) { this.#noHitTest = true; return; }
+          if (!hitTestPromise) { this.#setNoHitTest(); return; }
           return Promise.resolve(hitTestPromise);
         })
         .then((source: XRHitTestSource | undefined) => { if (source) this.#hitTestSource = source; })
-        .catch(() => { this.#noHitTest = true; });
+        .catch(() => { this.#setNoHitTest(); });
 
       session.addEventListener('end', () => {
         this.#hitTestSource?.cancel();
@@ -122,7 +141,7 @@ export class AnchorState extends State {
       });
     }
 
-    if (this.#noHitTest) { this.#placeOnFloor(); return; }
+    if (this.#noHitTest) return; // waiting on #onSelect to place from whatever fired it
 
     if (this.#hitTestSource) {
       const hits = frame.getHitTestResults(this.#hitTestSource);

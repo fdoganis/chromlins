@@ -13,10 +13,10 @@ import * as path from 'node:path';
 // question.
 //
 // Prod build ⇒ __DEV__ is false ⇒ no `?run` route: the board is placed the real
-// way. IWER has no @iwer/sem, so the app's `requestHitTestSource` rejects, which
-// is exactly the "no usable hit-test" path AnchorState handles by dropping the
-// board on the floor at (0,0,-0.6) — the same pose `?run` uses, so xr.spec's
-// hole/rainbow constants apply verbatim.
+// way. IWER has no @iwer/sem, so the app's `requestHitTestSource` rejects —
+// AnchorState's "no usable hit-test" path — and then, like any real select on
+// that path, a controller select at y=0.02 drops the board at (0,0,-0.6) — the
+// same pose `?run` uses, so xr.spec's hole/rainbow constants apply verbatim.
 //
 // The packed page fetches three from the jsdelivr importmap URL at runtime; this
 // spec needs outbound network (CI has it). Set PACKED_PREBUILT=1 to skip the
@@ -87,23 +87,33 @@ test('packed artifact: an emulated controller plays a round and fills the rainbo
   }, undefined, { timeout: 15_000 });
   await page.waitForTimeout(1500);
 
-  // 3. head high + looking down so AnchorState's no-hit-test fallback lands the
-  //    board on the floor at (0,0,-0.6), axis-aligned (camY > 0.8 ⇒ y=0; x=0 and
-  //    a hole behind the head ⇒ zero yaw from #faceCamera).
+  // 3. head high + a controller connected so AnchorState reaches its no-hit-test
+  //    path, then a select at y=0.02 places the board at (0,0,-0.6) — #onSelect
+  //    subtracts 0.02, so this lands the anchor at exactly y=0, axis-aligned
+  //    (x=0 and a hole behind the head ⇒ zero yaw from #faceCamera).
   await page.evaluate(async () => {
     // @ts-expect-error
     const d = window.__xr;
     await d.remote.dispatch('look_at', { device: 'headset', position: { x: 0, y: 1.5, z: 0.3 }, target: { x: 0, y: 0, z: -0.6 } });
+    await d.remote.dispatch('set_input_mode', { mode: 'controller' });
+    await d.remote.dispatch('set_connected', { device: 'controller-right', connected: true });
   });
-  await page.waitForTimeout(2500); // reject → #noHitTest → #placeOnFloor → Intro → RunState
+  await page.waitForTimeout(1500); // reject → #noHitTest, hint shown
+  await page.evaluate(async ({ aim }) => {
+    // @ts-expect-error
+    const d = window.__xr;
+    await d.remote.dispatch('set_transform', { device: 'controller-right', position: { x: 0, y: 0.02, z: -0.6 }, orientation: aim });
+    await d.remote.dispatch('set_select_value', { device: 'controller-right', value: 1 });
+    await new Promise((r) => setTimeout(r, 25));
+    await d.remote.dispatch('set_select_value', { device: 'controller-right', value: 0 });
+  }, { aim: AIM_DOWN });
+  await page.waitForTimeout(600); // #placeOnFloor → Intro (its own "START" prompt eats the loop's first select below)
 
   // 4. drop to the standard viewing pose (board already placed; anchor won't move)
   await page.evaluate(async () => {
     // @ts-expect-error
     const d = window.__xr;
     await d.remote.dispatch('look_at', { device: 'headset', position: { x: 0, y: 0.55, z: 0.35 }, target: { x: 0, y: 0.12, z: -0.6 } });
-    await d.remote.dispatch('set_input_mode', { mode: 'controller' });
-    await d.remote.dispatch('set_connected', { device: 'controller-right', connected: true });
   });
   await page.waitForTimeout(600);
 
