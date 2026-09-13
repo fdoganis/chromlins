@@ -4,11 +4,11 @@
 // and other spatial audio examples
 
 // Owns the shared AudioContext (via its own AudioListener, on the camera),
-// mute state, and positioning. Every cue — SFX and the music bed — is a tiny
-// SoundBox (CPlayer) song rendered once to an AudioBuffer and cached. The
-// instruments are pulled from this project's own "redline" SoundBox
-// composition (see CREDITS.md); the "songs" here are hand-authored, a few
-// notes each — not excerpts of redline itself.
+// mute state, and positioning. Every SFX cue is a tiny SoundBox (CPlayer)
+// song rendered once to an AudioBuffer and cached; the music bed is the real
+// "redline" track (see CREDITS.md), played back verbatim. The SFX
+// instruments are redline's own (instruments 6/5/0/1), referenced rather
+// than duplicated, so its bytes serve both jobs.
 // audio/AudioManager.ts
 import { AudioListener, PositionalAudio } from 'three';
 import type { Object3D, PerspectiveCamera } from 'three';
@@ -22,12 +22,13 @@ const LEAD       = redline.songData[0].i;
 const BASS       = redline.songData[1].i;
 
 type Track = { inst: number[]; seq: number[] }; // seq: one note per row from row 0 (0 = rest)
-type Cue = { tracks: Track[]; rows?: number; rowLen?: number; loop?: boolean };
+type Cue = { tracks: Track[]; rows?: number; rowLen?: number; loop?: boolean; raw?: object };
 
 const SFX_ROWLEN = 2205; // ~50 ms/row — snappy
 
-// Placeholder melodies — a few SoundBox note ints each, on redline's own
-// instruments.
+// Placeholder melodies for the short cues — a few SoundBox note ints each,
+// on redline's own instruments. `music` skips the placeholder shape
+// entirely and plays redline verbatim (`raw`).
 const CUES: Record<string, Cue> = {
   spawn:   { tracks: [{ inst: NOISE_HIT,  seq: [135] }] },
   hit:     { tracks: [{ inst: NOISE_HIT,  seq: [147, 0, 159] }], rowLen: 1500 },
@@ -35,16 +36,11 @@ const CUES: Record<string, Cue> = {
   win:     { tracks: [{ inst: LEAD,       seq: [147, 151, 154, 159] }], rowLen: 3600 },
   over:    { tracks: [{ inst: BASS,       seq: [123, 0, 116, 0, 109] }], rowLen: 4200 },
   tick:    { tracks: [{ inst: NOISE_TICK, seq: [159] }], rowLen: 1400 },
-  music:   {
-    tracks: [
-      { inst: BASS, seq: [123, 0, 0, 0, 128, 0, 0, 0, 126, 0, 0, 0, 121, 0, 0, 0] },
-      { inst: LEAD, seq: [0, 0, 147, 0, 0, 0, 154, 0, 0, 0, 151, 0, 0, 0, 159, 0] },
-    ],
-    rows: 16, rowLen: 5513, loop: true, // ~2 s loop
-  },
+  music:   { tracks: [], loop: true, raw: redline },
 };
 
 function toSong(cue: Cue): object {
+  if (cue.raw) return cue.raw;
   const rows = cue.rows ?? Math.max(...cue.tracks.map((t) => t.seq.length)) + 4; // tail rows so releases ring out
   return {
     songData: cue.tracks.map((t) => {
