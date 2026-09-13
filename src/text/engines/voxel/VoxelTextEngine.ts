@@ -5,8 +5,8 @@ import type { ITextEngine, TextStyle } from '../../ITextEngine';
 import { InstancedPool } from '../../../rendering/InstancedPool';
 import { billboard } from '../billboard';
 import type { IGlyphSource } from '../../glyphs/IGlyphSource';
-import { BitmapGlyphs } from '../../glyphs/BitmapGlyphs';
-import { LIGHT_FONT } from '../../glyphs/light-font';
+import { CanvasGlyphs } from '../../glyphs/CanvasGlyphs';
+
 
 // Every label's voxels are indices into one shared InstancedPool (see
 // rendering/InstancedPool.ts) — allocating N indices, not spawning N
@@ -43,13 +43,13 @@ export class VoxelTextEngine implements ITextEngine {
   #glyphs: IGlyphSource;
   #reportedFull = false;
 
-  constructor(scene: Scene, camera: PerspectiveCamera, voxelSize = 0.008, maxInstances = 1024 * 1024) {
+  constructor(scene: Scene, camera: PerspectiveCamera, voxelSize = 0.005, maxInstances = 1024 * 1024) {
     this.#camera = camera;
     this.#voxelSize = voxelSize;
     const material: Material = new MeshPhongMaterial({ shininess: 200 });
     const geometry: BufferGeometry = new BoxGeometry(1, 1, 1);
     this.#pool = new InstancedPool(scene, geometry, maxInstances, material);
-    this.#glyphs = new BitmapGlyphs(LIGHT_FONT);
+    this.#glyphs = new CanvasGlyphs(16);
   }
 
   create(text: string, anchor?: ITransform, style?: TextStyle): VoxelHandle {
