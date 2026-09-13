@@ -2,7 +2,6 @@ import {
   WebGLRenderer,
   Scene,
   PerspectiveCamera,
-  AmbientLight,
   HemisphereLight,
   DirectionalLight,
   Mesh,
@@ -92,7 +91,6 @@ export class RenderingManager {
     // when no hit-test source ever shows up.
     const sessionInit: XRSessionInit = {
       optionalFeatures: ['hit-test', 'hand-tracking'],
-      depthSensing: { usagePreference: ['gpu-optimized'], dataFormatPreference: [] }
     };
     const btn = xrButton(this.renderer, sessionInit);
     btn.style.backgroundColor = 'skyblue';
@@ -170,26 +168,12 @@ export class RenderingManager {
     catcher.material.stencilRef = 1;
     this.anchor.add(catcher);
 
-    this.renderer.xr.addEventListener('sessionstart', this.#onXRStart);
-    this.renderer.xr.addEventListener('sessionend', this.#onXREnd);
     window.addEventListener('resize', this.#onResize);
   }
 
-  #depthMeshAdded = false;
-
   render() {
-    if (!this.#depthMeshAdded) {
-      const depthMesh = this.renderer.xr.getDepthSensingMesh();
-      if (depthMesh) { this.scene.add(depthMesh); this.#depthMeshAdded = true; }
-    }
     this.renderer.render(this.scene, this.camera);
   }
-
-  #onXRStart = () => {
-  };
-
-  #onXREnd = () => {
-  };
 
   #onResize = () => {
     if (this.renderer.xr.isPresenting) { return; }
@@ -200,8 +184,6 @@ export class RenderingManager {
   };
 
   dispose() {
-    this.renderer.xr.removeEventListener('sessionstart', this.#onXRStart);
-    this.renderer.xr.removeEventListener('sessionend', this.#onXREnd);
     window.removeEventListener('resize', this.#onResize);
     this.renderer.dispose();
   }
