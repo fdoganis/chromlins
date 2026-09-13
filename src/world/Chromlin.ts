@@ -15,32 +15,18 @@ const _cam = new Vector3();
 type Eye = { pupil: Object3D; x: number; y: number; vx: number; vy: number };
 
 export class Chromlin extends Actor {
-  // Config, on the class. ?tweak binds a lil-gui folder to it. yawMax/range/
-  // spring/damp/kick are read every frame; the rest at build time.
-  static tune = {
-    yawMax: 0.8,     // how far the face can turn toward the player
-    range: 0.006,    // how far the pupil can roam on the eyeball
-    spring: 120,     // pull toward the target — higher = snappier
-    damp: 0.78,      // <1 leaves some overshoot → the googly jiggle
-    kick: 0.03,      // rise/sink acceleration → pupil impulse
-    faceYFrac: 0.55, // face height as a fraction of the body half-height
-    whiteX: 0.014,
-    whiteZ: 0.043,
-  };
-
   #face: Object3D;
   #eyes: Eye[] = [];
   #prevYSpeed = 0;
 
   constructor(root: Object3D) {
     super(root);
-    const k = Chromlin.tune;
     this.#face = new Object3D();
-    this.#face.position.set(0, 0.10 * k.faceYFrac, 0); // 0.10 = Actor half-height
+    this.#face.position.set(0, 0.10 * 0.55, 0); // 0.10 = Actor half-height, 0.55 = faceYFrac
     this.mesh.add(this.#face);
     for (const sx of [-1, 1]) {
       const white = new Mesh(eyeGeo, whiteMat);
-      white.position.set(sx * k.whiteX, 0, k.whiteZ);
+      white.position.set(sx * 0.014, 0, 0.043); // whiteX, whiteZ
       this.#face.add(white);
       const pupil = new Mesh(pupilGeo, BLACK_EYE_MAT);
       pupil.position.z = 0.006;
@@ -50,22 +36,21 @@ export class Chromlin extends Actor {
   }
 
   override animate(delta: number, ySpeed: number, camPos: Vector3): void {
-    const k = Chromlin.tune;
     this.mesh.worldToLocal(_cam.copy(camPos));
-    this.#face.rotation.y = MathUtils.clamp(Math.atan2(_cam.x, _cam.z), -k.yawMax, k.yawMax);
+    this.#face.rotation.y = MathUtils.clamp(Math.atan2(_cam.x, _cam.z), -0.8, 0.8); // yawMax
     this.#face.updateMatrixWorld();
 
     this.#face.worldToLocal(_cam.copy(camPos)); // player head in the turned face's frame
     const d = _cam.length() || 1;
-    const tx = MathUtils.clamp((_cam.x / d) * 0.02, -k.range, k.range);
-    const ty = MathUtils.clamp((_cam.y / d) * 0.02, -k.range, k.range);
+    const tx = MathUtils.clamp((_cam.x / d) * 0.02, -0.006, 0.006); // range
+    const ty = MathUtils.clamp((_cam.y / d) * 0.02, -0.006, 0.006); // range
 
-    const kick = (ySpeed - this.#prevYSpeed) * k.kick; // pop up → pupils lag down, then spring back
+    const kick = (ySpeed - this.#prevYSpeed) * 0.03; // rise/sink pop → pupils lag then spring back
     this.#prevYSpeed = ySpeed;
 
     for (const e of this.#eyes) {
-      e.vx = (e.vx + (tx - e.x) * k.spring * delta) * k.damp;
-      e.vy = (e.vy + (ty - e.y - kick) * k.spring * delta) * k.damp;
+      e.vx = (e.vx + (tx - e.x) * 120 * delta) * 0.78; // spring, damp (<1 leaves the googly overshoot)
+      e.vy = (e.vy + (ty - e.y - kick) * 120 * delta) * 0.78;
       e.x += e.vx * delta;
       e.y += e.vy * delta;
       e.pupil.position.x = e.x;
