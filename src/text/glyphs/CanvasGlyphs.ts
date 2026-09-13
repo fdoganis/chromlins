@@ -7,7 +7,11 @@ import type { IGlyphSource, Glyphs } from './IGlyphSource';
 export class CanvasGlyphs implements IGlyphSource {
   #px: number;
   #cv = document.createElement('canvas');
-  #ctx = this.#cv.getContext('2d')!;
+  // willReadFrequently: layout() calls getImageData() on every text update
+  // (the countdown timer alone does this once a second during play) — this
+  // tells the browser to keep the backing store CPU-side instead of paying a
+  // GPU readback stall on each call.
+  #ctx = this.#cv.getContext('2d', { willReadFrequently: true })!;
 
   constructor(px = 10) { this.#px = px; }
 
