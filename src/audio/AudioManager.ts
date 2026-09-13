@@ -6,27 +6,28 @@
 // Owns the shared AudioContext (via its own AudioListener, on the camera),
 // mute state, and positioning. Every cue — SFX and the music bed — is a tiny
 // SoundBox (CPlayer) song rendered once to an AudioBuffer and cached. The
-// instruments are real presets lifted from a public SoundBox song (Rybar/voxby
-// pot-break.js); the "songs" are hand-authored, a few notes each.
+// instruments are pulled from this project's own "redline" SoundBox
+// composition (see CREDITS.md); the "songs" here are hand-authored, a few
+// notes each — not excerpts of redline itself.
 // audio/AudioManager.ts
 import { AudioListener, PositionalAudio } from 'three';
 import type { Object3D, PerspectiveCamera } from 'three';
 import { CPlayer } from './engines/soundbox/player-small';
+import { redline } from './redline';
 import type { SoundHandle } from './ISoundEngine';
 
-// Instrument presets (29-int SoundBox `i` arrays), shared across cues.
-const NOISE_HIT  = [0, 0, 140, 0, 0, 0, 140, 0, 0, 81, 4, 10, 47, 55, 0, 0, 0, 187, 5, 0, 1, 239, 135, 0, 32, 108, 5, 16, 4];
-const NOISE_TICK = [0, 0, 128, 0, 0, 0, 128, 0, 0, 125, 0, 1, 59, 0, 0, 0, 0, 0, 0, 0, 2, 193, 171, 0, 29, 39, 3, 88, 3];
-const LEAD       = [3, 116, 128, 0, 0, 154, 140, 59, 0, 127, 2, 2, 47, 61, 0, 0, 0, 96, 3, 1, 3, 94, 79, 0, 32, 84, 2, 48, 4];
-const BASS       = [0, 255, 116, 64, 0, 255, 120, 0, 64, 127, 4, 6, 35, 0, 0, 0, 0, 0, 0, 0, 2, 14, 0, 3, 72, 0, 0, 25, 3];
+const NOISE_HIT  = redline.songData[6].i;
+const NOISE_TICK = redline.songData[5].i;
+const LEAD       = redline.songData[0].i;
+const BASS       = redline.songData[1].i;
 
 type Track = { inst: number[]; seq: number[] }; // seq: one note per row from row 0 (0 = rest)
 type Cue = { tracks: Track[]; rows?: number; rowLen?: number; loop?: boolean };
 
 const SFX_ROWLEN = 2205; // ~50 ms/row — snappy
 
-// Placeholder melodies — a few SoundBox note ints each. The instruments are real;
-// these note sequences are meant to be replaced by tracker exports (see GNOMES §5).
+// Placeholder melodies — a few SoundBox note ints each, on redline's own
+// instruments.
 const CUES: Record<string, Cue> = {
   spawn:   { tracks: [{ inst: NOISE_HIT,  seq: [135] }] },
   hit:     { tracks: [{ inst: NOISE_HIT,  seq: [147, 0, 159] }], rowLen: 1500 },
