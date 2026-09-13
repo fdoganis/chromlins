@@ -13,47 +13,52 @@ import {
   SRGBColorSpace,
   NotEqualStencilFunc
 } from 'three';
-import { XRButton } from 'three/addons/webxr/XRButton.js';
-import { getQuery } from '../core/Utils';
-
-// __DEV__ only: a device with no immersive-ar support falls back to
-// immersive-vr on its own (XRButton's default behavior), but the real flow is
-// hard to reach without such a device on hand. `?xr=ar` / `?xr=vr` forces the
-// mode by bypassing XRButton's own try-AR-then-VR detection, so the fallback
-// path (AnchorState already floor-places when there's no hit-test source) can
-// be exercised on any AR-capable dev machine or the emulator.
-function forcedXRButton(renderer: WebGLRenderer, mode: XRSessionMode, sessionInit: XRSessionInit): HTMLElement {
-  const label = mode === 'immersive-ar' ? 'AR' : 'VR';
+// Inline replacement for three/addons' XRButton.createButton(): unlike bare
+// 'three' that helper isn't externalized to a CDN in this build, so its
+// insecure-context fallback link, offerSession quick-start prompt and
+// VR/AR-specific chrome this game never shows all get bundled for real. This
+// keeps only what RenderingManager needs: feature-detect AR-then-VR, one
+// button, start/stop.
+function xrButton(renderer: WebGLRenderer, sessionInit: XRSessionInit): HTMLElement {
   const btn = document.createElement('button');
-  btn.textContent = `START ${label} (forced)`;
+  btn.textContent = 'START XR';
+  btn.disabled = true;
   Object.assign(btn.style, {
-    position: 'absolute', bottom: '20px', left: 'calc(50% - 80px)',
+    position: 'absolute', bottom: '20px', left: 'calc(50% - 50px)', width: '100px',
     padding: '12px 6px', border: '1px solid #fff', borderRadius: '4px',
-    background: 'rgba(0,0,0,0.1)', color: '#fff', font: 'normal 13px sans-serif', cursor: 'pointer'
+    background: 'rgba(0,0,0,0.1)', color: '#fff', font: 'normal 13px sans-serif', cursor: 'auto'
   });
-  // XRButton.js quietly adds these three to whatever optionalFeatures you pass
-  // it before requesting a session — three's WebXRManager.setSession() does a
-  // session.requestReferenceSpace('local-floor') internally and that rejects
-  // (silently, if unawaited) without 'local-floor' having been negotiated.
-  const sessionOptions: XRSessionInit = {
-    ...sessionInit,
-    optionalFeatures: ['local-floor', 'bounded-floor', 'layers', ...(sessionInit.optionalFeatures ?? [])]
-  };
-  let session: XRSession | null = null;
-  btn.onclick = () => {
-    if (session) { session.end(); return; }
-    navigator.xr!.requestSession(mode, sessionOptions).then(async (s) => {
-      session = s;
-      await renderer.xr.setSession(s);
-      btn.textContent = 'STOP XR';
-      s.addEventListener('end', () => { session = null; btn.textContent = `START ${label} (forced)`; });
-    }).catch((err) => {
-      btn.textContent = `${label} NOT SUPPORTED`;
-      console.warn(err);
-      session?.end();
-      session = null;
-    });
-  };
+
+  (async () => {
+    let mode: XRSessionMode | undefined;
+    try {
+      if (await navigator.xr?.isSessionSupported('immersive-ar')) mode = 'immersive-ar';
+      else if (await navigator.xr?.isSessionSupported('immersive-vr')) mode = 'immersive-vr';
+    } catch { /* rejected support check: treated as unsupported below */ }
+    if (!mode) { btn.textContent = 'XR NOT SUPPORTED'; return; }
+
+    // XRButton.js quietly adds these three to whatever optionalFeatures you pass
+    // it before requesting a session — three's WebXRManager.setSession() does a
+    // session.requestReferenceSpace('local-floor') internally and that rejects
+    // (silently, if unawaited) without 'local-floor' having been negotiated.
+    const sessionOptions: XRSessionInit = {
+      ...sessionInit,
+      optionalFeatures: ['local-floor', 'bounded-floor', 'layers', ...(sessionInit.optionalFeatures ?? [])]
+    };
+    let session: XRSession | null = null;
+    btn.disabled = false;
+    btn.style.cursor = 'pointer';
+    btn.onclick = () => {
+      if (session) { session.end(); return; }
+      navigator.xr!.requestSession(mode!, sessionOptions).then(async (s) => {
+        session = s;
+        s.addEventListener('end', () => { session = null; btn.textContent = 'START XR'; });
+        await renderer.xr.setSession(s);
+        btn.textContent = 'STOP XR';
+      }).catch((err) => { console.warn(err); session = null; });
+    };
+  })();
+
   return btn;
 }
 
@@ -66,7 +71,6 @@ export class RenderingManager {
   timerAnchor: Group; // child of anchor: pinned to the placed surface, not the camera; VoxelTextEngine still billboards it to face the viewer
   scoreAnchor: Group; // child of anchor: upper-left of the rainbow, world-space
   hiAnchor: Group;    // child of anchor: upper-right — the persistent "HI ####"
-  lights?: { hemi: HemisphereLight; sun: DirectionalLight; fore: DirectionalLight; back: DirectionalLight }; // __DEV__: ?tweak panel handle
 
 
   constructor() {
@@ -90,10 +94,7 @@ export class RenderingManager {
       optionalFeatures: ['hit-test', 'hand-tracking'],
       depthSensing: { usagePreference: ['gpu-optimized'], dataFormatPreference: [] }
     };
-    const forcedMode = __DEV__ ? ({ ar: 'immersive-ar', vr: 'immersive-vr' } as const)[getQuery().xr as 'ar' | 'vr'] : undefined;
-    const btn = forcedMode && navigator.xr
-      ? forcedXRButton(this.renderer, forcedMode, sessionInit)
-      : XRButton.createButton(this.renderer, sessionInit);
+    const btn = xrButton(this.renderer, sessionInit);
     btn.style.backgroundColor = 'skyblue';
     document.body.appendChild(btn);
 
@@ -152,10 +153,6 @@ export class RenderingManager {
     backLight.color.setHSL(0.58, 0.35, 0.6);
     backLight.position.set(-1, -1, -2);
     this.anchor.add(backLight, backLight.target);
-
-    if (__DEV__) this.lights = { hemi, sun, fore: foreLight, back: backLight }; // ?tweak reaches the live lights through this
-
-
 
     // Invisible: only its shadow renders, so virtual objects appear to cast a shadow
     // onto the real (passthrough) floor. Sized to comfortably cover the spawn disc.

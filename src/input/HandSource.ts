@@ -59,7 +59,7 @@ export class HandSource extends SpatialInputSource {
           downSpeed >= SPEED_MIN_mps &&
           relY >= BAND_LOW_m && relY <= BAND_HIGH_m
         ) {
-          this.queue.push(new SelectCommand(joint, this.#handedness, false, WHACK_REACH_m));
+          this.queue.push(new SelectCommand(joint, this.#handedness, WHACK_REACH_m));
           this.#coolUntil = now + COOLDOWN_ms;
         }
       }

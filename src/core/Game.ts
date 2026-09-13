@@ -1,35 +1,26 @@
 import { GameLoop } from './GameLoop';
-import { StateMachine } from './StateMachine';
+import { makeSm } from './sm';
+import type { Sm, Screen } from './sm';
 import { Score } from './Score';
 import { Level } from './Level';
 import { HiScore } from './HiScore';
 import { RenderingManager } from '../rendering/RenderingManager';
 import { InputManager } from '../input/InputManager';
 import { AudioManager } from '../audio/AudioManager';
-
-import { SoundBoxSoundEngine } from '../audio/engines/soundbox/SoundBoxSoundEngine';
-
 import { World } from '../world/World';
 import { SelectCommand } from '../commands/SelectCommand';
-import { IntroState } from '../states/IntroState';
-import { AnchorState } from '../states/AnchorState';
-import { RunState } from '../states/RunState';
-import { WinState } from '../states/WinState';
-import { GameOverState } from '../states/GameOverState';
-import { NameEntryState } from '../states/NameEntryState';
-import { CalibState } from '../states/CalibState';
-import { randomTransform, getQuery } from '../core/Utils';
+import { makeIntro } from '../states/IntroState';
+import { makeAnchor } from '../states/AnchorState';
+import { makeRun } from '../states/RunState';
+import { makeWin } from '../states/WinState';
+import { makeGameOver } from '../states/GameOverState';
+import { makeNameEntry } from '../states/NameEntryState';
+import { getQuery } from '../core/Utils';
 import { Haptics } from '../input/XRGamepadUtils';
 import { TextManager } from '../text/TextManager';
 import type { TextHandle } from '../text/ITextEngine';
 import { VoxelTextEngine } from '../text/engines/voxel/VoxelTextEngine';
-import { SegmentTextEngine } from '../text/engines/segment/SegmentTextEngine';
-import { TEXT_ENGINE, BUILD } from '../game.config';
 import { HUD_TEXT } from './palette';
-import { applyTuneShare } from '../world/Unicorn';
-import { Mace } from '../rendering/Mace';
-import type { State } from './State';
-import type { ClassOf } from '../types/ClassOf';
 
 // Game is the composition root; it is the ctx every State receives.
 export class Game {
@@ -42,115 +33,85 @@ export class Game {
   readonly level = new Level();
   readonly hiScore = new HiScore();
   #input: InputManager;
-  #sm: StateMachine;
+  #sm: Sm;
   #hiLabel: TextHandle;
   #hiShown = -1;
   #hiName = '';
-  #maceLeft?: Mace; // BUILD === 'deluxe' only — assigned in #bindInput()
-  #maceRight?: Mace;
 
-  change(state: ClassOf<State>): void { this.#sm.change(state); }
+  change(state: string): void { this.#sm.change(state); }
 
 
   constructor() {
-    // `?u=<base64>` — a unicorn look shared from the groom studio. Merge it into
-    // Unicorn.tune before World builds the unicorn. Folds out of prod.
-    if (__DEV__) { const u = getQuery().u; if (u) applyTuneShare(u); }
-
     this.rendering = new RenderingManager();
-    this.audio = new AudioManager(this.rendering.camera, new SoundBoxSoundEngine()); // or: OscillatorSoundEngine / ZzfxSoundEngine
+    this.audio = new AudioManager(this.rendering.camera);
     this.world = new World(this.rendering.anchor, this.audio, this.rendering.camera);
     this.haptics = new Haptics(this.rendering.renderer);
-    this.#input = new InputManager(this.rendering.renderer, this.rendering.scene, this.rendering.camera, this.rendering.anchor);
-    // TEXT_ENGINE is a literal const — rolldown folds the compare and the
-    // unpicked engine (plus, for 'segment', all the voxel glyph data) shakes out.
-    const textEngine = TEXT_ENGINE === 'segment'
-      ? new SegmentTextEngine(this.rendering.scene, this.rendering.camera)
-      : new VoxelTextEngine(this.rendering.scene, this.rendering.camera);
-    this.text = new TextManager(textEngine);
+    this.#input = new InputManager(this.rendering.renderer, this.rendering.scene, this.rendering.anchor);
+    this.text = new TextManager(new VoxelTextEngine(this.rendering.scene, this.rendering.camera));
 
     // Persistent HUD: the all-time best, shown everywhere. Game.update() ticks it
     // to max(hiScore, live score) so it climbs in real time while you beat it.
     this.#hiLabel = this.text.show('HI 0', this.rendering.hiAnchor, { color: HUD_TEXT });
 
-    this.#sm = new StateMachine();
-    this.#buildStates();
+    this.#sm = this.#buildStates();
 
     this.#bindInput();
   }
 
   // Dev: `?run` skips Intro/Placing and drops the board in front of the default
   // camera, so the running state is testable on plain desktop without WebXR.
-  #buildStates(): void {
-    const sm = this.#sm;
+  #buildStates(): Sm {
     const level = this.level;
 
     const q = getQuery();
     const debugRun = __DEV__ && 'run' in q;
     const debugName = __DEV__ && 'name' in q;   // jump straight to NameEntryState
     const debugL13 = __DEV__ && 'l13' in q;     // jump straight into the level 13 run
-    const debugCalib = __DEV__ && 'calib' in q; // hand-whack calibration (CalibState)
-    const debugTweak = __DEV__ && 'tweak' in q; // live-tune panel, over a ?run-style round
     const debugUni = __DEV__ && 'uni' in q;     // force the unicorn peeking (mane tuning + tests/mane.spec.ts)
-    const debugIntro = __DEV__ && BUILD === 'deluxe' && 'intro' in q; // watch the opening cinematic on desktop
 
-    sm.register(IntroState, new IntroState(this));
-    sm.register(AnchorState, new AnchorState(this));
-    sm.register(RunState, new RunState(this));
-    sm.register(WinState, new WinState(this));
-    sm.register(GameOverState, new GameOverState(this));
-    sm.register(NameEntryState, new NameEntryState(this));
-    if (__DEV__) sm.register(CalibState, new CalibState(this));
+    const screens: Record<string, Screen> = {
+      intro: makeIntro(this),
+      anchor: makeAnchor(this),
+      run: makeRun(this),
+      win: makeWin(this),
+      over: makeGameOver(this),
+      name: makeNameEntry(this),
+    };
+    const sm = makeSm(screens);
 
-    if (debugRun || debugName || debugL13 || debugCalib || debugTweak || debugUni || debugIntro) {
+    if (debugRun || debugName || debugL13 || debugUni) {
       this.rendering.anchor.position.set(0, 0, -0.6);
       this.rendering.camera.position.set(0, 0.6, 0.4);
       this.rendering.camera.lookAt(0, 0, -0.6);
     }
     if (debugL13) level.set(13);
-    sm.start(
-      debugCalib ? CalibState : // its own hand-on-surface placement step
-      debugName ? NameEntryState :
-      debugIntro ? IntroState :
-      debugRun || debugL13 || debugTweak || debugUni ? RunState :
-      AnchorState, // place the board, then IntroState (cinematic), then RunState
+    sm.change(
+      debugName ? 'name' :
+      debugRun || debugL13 || debugUni ? 'run' :
+      'anchor', // place the board, then IntroState, then RunState
     );
-    if (__DEV__ && debugTweak) import('../dev/tweakPanel').then((m) => m.openTweakPanel(this));
     // a unicorn peeking at hole 0, held — after RunState.enter()'s world.reset()
-    if (__DEV__ && debugUni) queueMicrotask(() => this.world.spawnAtHole(0, '#f3ead7', Infinity, -1, true));
+    if (debugUni) queueMicrotask(() => this.world.spawnAtHole(0, '#f3ead7', Infinity, -1, true));
+    return sm;
   }
 
   #bindInput(): void {
-    const { xrLeft, xrRight, handLeft, handRight, gamepadPool } = this.#input;
+    const { xrLeft, xrRight, handLeft, handRight } = this.#input;
 
     xrLeft.bind('select', new SelectCommand(xrLeft.node, 'left'));
     xrRight.bind('select', new SelectCommand(xrRight.node, 'right'));
     handLeft.bind('pinchend', new SelectCommand(handLeft.node, 'left'));
     handRight.bind('pinchend', new SelectCommand(handRight.node, 'right'));
-
-    // Pure affordance, no gameplay tie: a mace swings on that controller's own
-    // select. BUILD === 'deluxe' only — folds out of the light/js13k build.
-    if (BUILD === 'deluxe') {
-      this.#maceLeft = new Mace(xrLeft.node);
-      this.#maceRight = new Mace(xrRight.node);
-      xrLeft.node.addEventListener('select', () => this.#maceLeft!.swing());
-      xrRight.node.addEventListener('select', () => this.#maceRight!.swing());
-    }
-
-    // The XR controller trigger already emits `select` above; a real (non-XR)
-    // gamepad still routes through gamepadPool.
-    gamepadPool.onConnect((pad) => pad.bind(0, new SelectCommand(randomTransform())));
   }
 
   processInput() {
     this.#input.collect();
-    for (const cmd of this.#input.commands) this.#sm.dispatch(cmd);
+    for (const cmd of this.#input.commands) if (cmd instanceof SelectCommand) this.#sm.select(cmd);
   }
 
   update(delta: number, frame?: XRFrame) {
     this.#sm.update(delta, frame);
     this.text.update(delta); // labels are global, not owned by the active state
-    if (BUILD === 'deluxe') { this.#maceLeft!.update(delta); this.#maceRight!.update(delta); }
 
     const hi = Math.max(this.hiScore.score, this.score.value);
     const name = this.hiScore.name;

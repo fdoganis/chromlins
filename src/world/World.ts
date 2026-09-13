@@ -99,26 +99,12 @@ export class World {
       return { tag: h.tag, color: DECOY_PUFF, position: h.position };
     }
     if (mesh) try { this.#audio.playAt(mesh, 'hit'); } catch { /* audio may be unavailable */ }
-    return this.#collect(this.#actors.despawn(h.id), true);
+    return this.#collect(this.#actors.despawn(h.id));
   }
 
-  // Collect a random live actor — keyboard fallback with no real aim.
-  hitRandom(): RemovedActor | null {
-    return this.#collect(this.#actors.despawnAny());
-  }
-
-  // `positioned` = a positional 'hit' was already emitted (World.hit); the
-  // keyboard fallback has no location so it falls back to a flat cue.
-  #collect(removed: RemovedActor | null, positioned = false): RemovedActor | null {
+  #collect(removed: RemovedActor | null): RemovedActor | null {
     if (!removed) return null;
     this.#sparkles.burst(removed.position, removed.color, 'explode');
-    if (!positioned) {
-      try {
-        this.#audio.playSFX('hit');
-      } catch {
-        // audio may be unavailable
-      }
-    }
     return removed;
   }
 
@@ -139,9 +125,6 @@ export class World {
   // Drop any in-flight burst without touching the board/rainbow — for round end,
   // where update() stops and a live burst would otherwise freeze on screen.
   clearSparkles(): void { this.#sparkles.clear(); }
-
-  // ?tweak only: force every live body to respawn with the current knob values.
-  respawnActors(): void { if (__DEV__) this.#actors.respawnAll(); }
 
   dispose(): void {
     this.#actors.dispose();

@@ -5,16 +5,14 @@
 // The mane is placed automatically: each strand is an S-curve "drape" that
 // starts on the crown / forehead, kicks up, crests over the head and hangs down
 // the back, then curls its tip back toward the body — and every sample is pushed
-// out of the capsule by `margin` so nothing ends up buried. MANE_SIM picks the
-// physics on that rest pose: 'spring' (default — rigid tube strands on cheap
-// angular springs) or 'chain' (opt-in follow-the-leader rope). Tune everything
-// live in the groom studio (tests/tools/groom.html, `npm run groom`).
+// out of the capsule by `margin` so nothing ends up buried. Rigid tube strands
+// on cheap angular springs. Tune everything live in the groom studio
+// (tests/tools/groom.html, `npm run groom`).
 import {
   Mesh, MeshPhongMaterial, MeshBasicMaterial, CylinderGeometry, SphereGeometry,
   TubeGeometry, CatmullRomCurve3, Vector3, MathUtils, type Object3D,
 } from 'three';
 import { RAINBOW } from '../core/palette';
-import { MANE_SIM } from '../game.config';
 import { Actor, BODY_HALF_m, BODY_R_m } from './Actor';
 import { BLACK_EYE_MAT } from './Chromlin';
 import { deform } from './deform';
@@ -38,8 +36,6 @@ const _up = new Vector3(0, 1, 0);
 const _c = new Vector3();
 const _cd = new Vector3();
 const _step = new Vector3();
-const _tgt = new Vector3();
-const _dir = new Vector3();
 const _look = new Vector3();
 
 // Push a body-local point outward until it clears the capsule (core segment on
@@ -123,10 +119,9 @@ function twistedHornGeo(h: number, baseR: number, turns: number): CylinderGeomet
   return g;
 }
 
-// module-level so ?tweak / groom's Unicorn.rebuildGeo() can swap them; every
-// Unicorn shares them.
+// module-level so groom's Unicorn.rebuildGeo() can swap them; every Unicorn
+// shares them.
 let hornGeo = twistedHornGeo(0.075, 0.02, 2.5);
-let segGeo: CylinderGeometry | null = MANE_SIM === 'chain' ? new CylinderGeometry(0.007, 0.007, 1, 5) : null;
 let strands: { geo: TubeGeometry; root: Vector3; yaw: number; back: boolean }[] = [];
 
 function buildManeGeos(): void {
@@ -146,7 +141,7 @@ function buildManeGeos(): void {
 }
 
 export class Unicorn extends Actor {
-  // Config, on the class. groom / ?tweak bind lil-gui folders to mane / horn / face.
+  // Config, on the class. groom binds lil-gui folders to mane / horn / face.
   static tune = {
     "mane": {
       "backCount": 7,
@@ -203,7 +198,7 @@ export class Unicorn extends Actor {
 
   constructor(root: Object3D) {
     super(root);
-    if (!strands.length && MANE_SIM !== 'chain') buildManeGeos();
+    if (!strands.length) buildManeGeos();
     const f = Unicorn.tune.face;
     const body = this.mesh;
 
@@ -227,7 +222,7 @@ export class Unicorn extends Actor {
     horn.rotation.x = Unicorn.tune.horn.tiltX;
     body.add(horn);
 
-    this.#mane = MANE_SIM === 'chain' ? buildChainMane(body) : buildSpringMane(body);
+    this.#mane = buildSpringMane(body);
   }
 
   override animate(delta: number, ySpeed: number, camPos: Vector3): void {
@@ -238,12 +233,12 @@ export class Unicorn extends Actor {
     this.#mane(delta, ySpeed, this.#t);
   }
 
-  // groom / ?tweak only: rebuild the horn + all strand geometry after a shape knob.
+  // groom only: rebuild the horn + all strand geometry after a shape knob.
   static rebuildGeo(): void {
     if (!__DEV__) return;
     hornGeo.dispose();
     hornGeo = twistedHornGeo(Unicorn.tune.horn.height, Unicorn.tune.horn.baseR, Unicorn.tune.horn.turns);
-    if (MANE_SIM !== 'chain') buildManeGeos();
+    buildManeGeos();
   }
 }
 
@@ -268,73 +263,8 @@ function buildSpringMane(body: Object3D): ManeUpdate {
   };
 }
 
-// ---- 'chain' mane: follow-the-leader rope seeded on the S drape ----
-const CHAIN = { follow: 0.35, relax: 0.10, lag: 0.18, grav: 0.05, taper: 0.78, idle: 0.05 };
-
-type Strand = { root: Vector3; rest: Vector3[]; segLen: number; phase: number; pts: Vector3[]; segMeshes: Mesh[] };
-
-function makeStrand(body: Object3D, d: number, mat: MeshBasicMaterial): Strand {
-  const m = Unicorn.tune.mane;
-  const root = backRoot(d, m);
-  const pts = sDrape(root, d * m.backFan, true, m).map((v) => v.add(root)); // body-local absolute
-  const rest = pts.map((_, i) => (i === 0 ? new Vector3() : pts[i].clone().sub(pts[i - 1]).normalize())); // per-segment S tangent
-  const segLen = m.len / DRAPE_N;
-  const segMeshes = Array.from({ length: DRAPE_N }, (_, j) => {
-    const mm = new Mesh(segGeo!, mat);
-    const s = 1 - (j / DRAPE_N) * CHAIN.taper;
-    mm.scale.set(s, 1, s);
-    body.add(mm);
-    return mm;
-  });
-  return { root, rest, segLen, phase: d * 1.7, pts, segMeshes };
-}
-
-function stepStrand(st: Strand, bend: number, t: number): void {
-  const margin = Unicorn.tune.mane.margin;
-  st.pts[0].copy(st.root);
-  for (let i = 1; i < st.pts.length; i++) {
-    const parent = st.pts[i - 1];
-    const p = st.pts[i];
-    _dir.copy(p).sub(parent);
-    if (_dir.lengthSq() < 1e-8) _dir.copy(st.rest[i]);
-    _dir.normalize().lerp(st.rest[i], CHAIN.relax); // relax toward this segment's S tangent
-    _dir.y -= bend + (i - 1) * CHAIN.grav;
-    _dir.x += Math.sin(t * 4 + st.phase + i) * CHAIN.idle;
-    _tgt.copy(parent).addScaledVector(_dir.normalize(), st.segLen);
-    p.lerp(_tgt, CHAIN.follow).sub(parent).normalize().multiplyScalar(st.segLen).add(parent);
-    capsuleClamp(p, margin); // never let a node sink into the body
-  }
-  for (let j = 0; j < st.segMeshes.length; j++) {
-    const a = st.pts[j];
-    _dir.copy(st.pts[j + 1]).sub(a);
-    const len = _dir.length() || 1e-4;
-    st.segMeshes[j].position.copy(a).addScaledVector(_dir, 0.5);
-    st.segMeshes[j].quaternion.setFromUnitVectors(_up, _dir.divideScalar(len));
-    st.segMeshes[j].scale.y = len;
-  }
-}
-
-function buildChainMane(body: Object3D): ManeUpdate {
-  const mid = (maneMat.length - 1) / 2;
-  const rope = maneMat.map((mat, k) => makeStrand(body, k - mid, mat));
-  return (_dt, ySpeed, t) => {
-    const bend = MathUtils.clamp(ySpeed * CHAIN.lag, -0.35, 0.9);
-    for (const st of rope) stepStrand(st, bend, t);
-  };
-}
-
 export function disposeUnicornAssets(): void {
   for (const s of strands) s.geo.dispose();
-  for (const g of [hornGeo, segGeo, eyeGeo, cheekGeo, muzzleGeo]) g?.dispose();
+  for (const g of [hornGeo, eyeGeo, cheekGeo, muzzleGeo]) g.dispose();
   for (const m of [pinkMat, ...maneMat]) m.dispose(); // BLACK_EYE_MAT is owned by Chromlin
-}
-
-// Merge a base64'd Unicorn.tune subset (from the groom studio's "share URL")
-// into the live tune. Call BEFORE the first `new Unicorn()`. DEV only — the
-// `?u=` route in Game.ts is `__DEV__`-guarded, so this tree-shakes in prod.
-export function applyTuneShare(b64: string): void {
-  try {
-    const t = JSON.parse(atob(b64)) as Partial<typeof Unicorn.tune>;
-    for (const k of ['mane', 'horn', 'face'] as const) if (t[k]) Object.assign(Unicorn.tune[k], t[k]);
-  } catch { /* not a valid share string — ignore */ }
 }

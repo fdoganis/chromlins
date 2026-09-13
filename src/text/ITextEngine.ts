@@ -7,8 +7,8 @@ export interface ITextEngine {
   create(text: string, anchor?: ITransform, style?: TextStyle): TextHandle;
   setText(handle: TextHandle, text: string): void;
   recolor?(handle: TextHandle, color: string): void;
-  setVisible?(handle: TextHandle, visible: boolean): void;
-  sync?(handle: TextHandle, anchor: ITransform, delta: number): void;
+  setVisible(handle: TextHandle, visible: boolean): void;
+  sync(handle: TextHandle, anchor: ITransform, delta: number): void;
   destroy(handle: TextHandle): void;
-  dispose?(): void;
+  dispose(): void;
 }

@@ -18,7 +18,7 @@ export class TextManager {
 
   recolor(handle: TextHandle, color: string) { this.#engine.recolor?.(handle, color); }
 
-  setVisible(handle: TextHandle, visible: boolean) { this.#engine.setVisible?.(handle, visible); }
+  setVisible(handle: TextHandle, visible: boolean) { this.#engine.setVisible(handle, visible); }
 
 
   remove(handle: TextHandle) {
@@ -28,13 +28,13 @@ export class TextManager {
 
   update(delta: number) {
     for (const [handle, anchor] of this.#labels)
-      if (anchor) this.#engine.sync?.(handle, anchor, delta); // TODO: QUESTION: NAMING: why call this "sync" instead of "update" for example?
+      if (anchor) this.#engine.sync(handle, anchor, delta); // TODO: QUESTION: NAMING: why call this "sync" instead of "update" for example?
   }
 
   // TODO: QUESTION: remove vs dispose? confusing API
   dispose() {
     for (const handle of this.#labels.keys()) this.#engine.destroy(handle);
     this.#labels.clear();
-    this.#engine.dispose?.();
+    this.#engine.dispose();
   }
 }

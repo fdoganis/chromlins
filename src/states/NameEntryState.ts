@@ -10,21 +10,12 @@
 // Reuses the gameplay loop: World's Actors for the rising bodies, the same
 // ray/proximity hit query, the same Sparkles burst.
 import { Object3D, Ray, Vector3 } from 'three';
-import { State } from '../core/State';
-import { SelectCommand } from '../commands/SelectCommand';
-import { IntroState } from './IntroState';
-import { RunState } from './RunState';
+import type { Game } from '../core/Game';
+import type { Screen } from '../core/sm';
+import type { SelectCommand } from '../commands/SelectCommand';
 import { BODY_HALF_m } from '../world/Actor';
 import { RAINBOW, HUD_TEXT } from '../core/palette';
-import type { ClassOf } from '../types/ClassOf';
-import type { Game } from '../core/Game';
-import type { World } from '../world/World';
-import type { RenderingManager } from '../rendering/RenderingManager';
-import type { TextManager } from '../text/TextManager';
 import type { TextHandle } from '../text/ITextEngine';
-import type { Score } from '../core/Score';
-import type { Level } from '../core/Level';
-import type { HiScore } from '../core/HiScore';
 
 // The whole 'light' glyph set — same as the HUD, nothing extra to ship.
 const CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 -+';
@@ -42,183 +33,161 @@ const _ray = new Ray();
 
 type Slot = { id: number; label: TextHandle; carrier: Object3D; char: string; locked: boolean };
 
-export class NameEntryState extends State {
-  #ctx: Game;
-  #world: World;
-  #text: TextManager;
-  #render: RenderingManager;
-  #score: Score;
-  #level: Level;
-  #hi: HiScore;
+export function makeNameEntry(ctx: Game): Screen {
+  const { world, text, rendering: render, score, level, hiScore: hi } = ctx;
 
-  #slots: Slot[] = [];
-  #okId = -1;
-  #okLabel: TextHandle | undefined;
-  #okCarrier: Object3D | undefined;
-  #prompt!: TextHandle;
-  #t = 0;
-  #exitIn = -1;               // >= 0 once OK is confirmed: seconds until we leave
-  #next: ClassOf<State> = IntroState; // where the beat leads — Run (level 13) on "13K"
+  let slots: Slot[] = [];
+  let okId = -1;
+  let okLabel: TextHandle | undefined;
+  let okCarrier: Object3D | undefined;
+  let prompt: TextHandle;
+  let t = 0;
+  let exitIn = -1;     // >= 0 once OK is confirmed: seconds until we leave
+  let next = 'intro';  // where the beat leads — 'run' (level 13) on "13K"
 
-  constructor(ctx: Game) {
-    super();
-    this.#ctx = ctx;
-    this.#world = ctx.world;
-    this.#text = ctx.text;
-    this.#render = ctx.rendering;
-    this.#score = ctx.score;
-    this.#level = ctx.level;
-    this.#hi = ctx.hiScore;
-    this.on(SelectCommand, this.#onSelect);
-  }
-
-  #char(): string { return CHARS[Math.floor(this.#t / STEP_S) % CHARS.length]; }
-
-  override enter() {
-    this.#t = 0;
-    this.#exitIn = -1;
-    this.#next = IntroState;
-    this.#slots = [];
-    this.#okId = -1;
-    this.#prompt = this.#text.show('NEW HI', this.#render.hudAnchor, { color: HUD_TEXT });
-    this.#raiseSlot(0);
-  }
-
-  #raiseSlot(i: number): void {
-    const id = this.#world.spawnAtHole(HOLES[i], RAINBOW[PAIR[i][0]], Infinity, i);
-    if (id < 0) return;
-    const { label, carrier } = this.#labelOn(id, this.#char());
-    this.#slots.push({ id, label, carrier, char: this.#char(), locked: false });
-  }
-
-  #raiseOk(): void {
-    this.#okId = this.#world.spawnAtHole(HOLES[3], OK_HEX, Infinity, OK_TAG);
-    if (this.#okId < 0) return;
-    const { label, carrier } = this.#labelOn(this.#okId, 'OK');
-    this.#okLabel = label;
-    this.#okCarrier = carrier;
-  }
+  const charNow = (): string => CHARS[Math.floor(t / STEP_S) % CHARS.length];
 
   // A label parented straight to the actor mesh sits at the capsule's centre —
   // buried in the body. Hang it on a carrier lifted just above the capsule top;
   // the carrier rides the mesh's rise and the voxel engine billboards it.
-  #labelOn(id: number, text: string): { label: TextHandle; carrier: Object3D } {
+  const labelOn = (id: number, str: string): { label: TextHandle; carrier: Object3D } => {
     const carrier = new Object3D();
     carrier.position.y = BODY_HALF_m + 0.045;
-    (this.#world.actorMesh(id) ?? this.#render.anchor).add(carrier);
-    return { label: this.#text.show(text, carrier, { color: HUD_TEXT }), carrier };
-  }
-
-  #drop(label: TextHandle, carrier: Object3D): void {
-    this.#text.remove(label);
-    carrier.parent?.remove(carrier);
-  }
-
-  override update(delta: number): void {
-    this.#world.update(delta); // ticks the actor rise + the sparkle bursts
-    this.#t += delta;
-
-    if (this.#exitIn >= 0) {
-      this.#exitIn -= delta;
-      if (this.#exitIn <= 0) this.#ctx.change(this.#next);
-      return;
-    }
-
-    const c = this.#char();
-    for (const s of this.#slots) {
-      if (s.locked || s.char === c) continue;
-      s.char = c;
-      this.#text.setText(s.label, c);
-    }
-  }
-
-  #onSelect = (cmd: SelectCommand): void => {
-    if (this.#exitIn >= 0) return;
-
-    let id: number;
-    if (__DEV__ && cmd.debugRandom) {
-      const next = this.#slots.find((s) => !s.locked); // keyboard: act on the first cycling slot, else OK
-      id = next ? next.id : this.#okId;
-    } else {
-      _o.setFromMatrixPosition(cmd.transform.matrixWorld);
-      _d.set(0, 0, -1).transformDirection(cmd.transform.matrixWorld);
-      const hit = this.#world.hitTestActor(_ray.set(_o, _d), cmd.reach || undefined);
-      if (!hit) return;
-      id = hit.id;
-    }
-
-    if (id === this.#okId) { this.#confirm(); return; }
-
-    const s = this.#slots.find((x) => x.id === id);
-    if (!s) return;
-    const i = this.#slots.indexOf(s);
-
-    if (s.locked) {
-      s.locked = false;
-      this.#world.recolorActor(s.id, RAINBOW[PAIR[i][0]]);
-      if (this.#okId >= 0 && this.#lockedCount() < 3) this.#sinkOk(); // fewer than 3 locked -> OK goes away
-    } else {
-      s.locked = true;
-      this.#world.recolorActor(s.id, RAINBOW[PAIR[i][1]]);
-      if (i < 2 && this.#slots.length === i + 1) this.#raiseSlot(i + 1);
-      else if (this.#slots.length === 3 && this.#lockedCount() === 3 && this.#okId < 0) this.#raiseOk();
-    }
+    (world.actorMesh(id) ?? render.anchor).add(carrier);
+    return { label: text.show(str, carrier, { color: HUD_TEXT }), carrier };
   };
 
-  #lockedCount(): number {
+  const drop = (label: TextHandle, carrier: Object3D): void => {
+    text.remove(label);
+    carrier.parent?.remove(carrier);
+  };
+
+  const raiseSlot = (i: number): void => {
+    const id = world.spawnAtHole(HOLES[i], RAINBOW[PAIR[i][0]], Infinity, i);
+    if (id < 0) return;
+    const { label, carrier } = labelOn(id, charNow());
+    slots.push({ id, label, carrier, char: charNow(), locked: false });
+  };
+
+  const raiseOk = (): void => {
+    okId = world.spawnAtHole(HOLES[3], OK_HEX, Infinity, OK_TAG);
+    if (okId < 0) return;
+    const { label, carrier } = labelOn(okId, 'OK');
+    okLabel = label;
+    okCarrier = carrier;
+  };
+
+  const lockedCount = (): number => {
     let n = 0;
-    for (const s of this.#slots) if (s.locked) n++;
+    for (const s of slots) if (s.locked) n++;
     return n;
-  }
+  };
 
-  #sinkOk(): void {
-    this.#burst(this.#okId);
-    this.#dropOk();
-    this.#okId = -1;
-  }
+  // Standard hit explosion at the actor's position, then remove it.
+  const burst = (id: number): void => {
+    const r = world.despawnActor(id);
+    if (r) world.burstSparkles(r.position, r.color, 'explode');
+  };
 
-  #dropOk(): void {
-    if (this.#okLabel && this.#okCarrier) this.#drop(this.#okLabel, this.#okCarrier);
-    this.#okLabel = undefined;
-    this.#okCarrier = undefined;
-  }
+  const dropOk = (): void => {
+    if (okLabel && okCarrier) drop(okLabel, okCarrier);
+    okLabel = undefined;
+    okCarrier = undefined;
+  };
 
-  #confirm(): void {
-    if (this.#slots.length < 3 || this.#lockedCount() < 3) return;
+  const sinkOk = (): void => {
+    burst(okId);
+    dropOk();
+    okId = -1;
+  };
 
-    const name = this.#slots.map((s) => s.char).join('');
-    this.#hi.submit(this.#score.value, name);
+  const confirm = (): void => {
+    if (slots.length < 3 || lockedCount() < 3) return;
 
-    for (const s of this.#slots) { this.#burst(s.id); this.#drop(s.label, s.carrier); }
-    this.#burst(this.#okId);
-    this.#dropOk();
-    this.#slots = [];
-    this.#okId = -1;
+    const name = slots.map((s) => s.char).join('');
+    hi.submit(score.value, name);
+
+    for (const s of slots) { burst(s.id); drop(s.label, s.carrier); }
+    burst(okId);
+    dropOk();
+    slots = [];
+    okId = -1;
 
     if (name === L13_NAME) {
       try { localStorage.setItem('gamma.l13', '1'); } catch { /* not persisted */ }
-      this.#text.setText(this.#prompt, '13 UNLOCKED');
-      this.#level.set(13);
-      this.#next = RunState; // straight into the L13 run after the beat
+      text.setText(prompt, '13 UNLOCKED');
+      level.set(13);
+      next = 'run'; // straight into the L13 run after the beat
     } else {
-      this.#text.setText(this.#prompt, 'SAVED');
+      text.setText(prompt, 'SAVED');
     }
-    this.#exitIn = EXIT_BEAT_S;
-  }
+    exitIn = EXIT_BEAT_S;
+  };
 
-  // Standard hit explosion at the actor's position, then remove it.
-  #burst(id: number): void {
-    const r = this.#world.despawnActor(id);
-    if (r) this.#world.burstSparkles(r.position, r.color, 'explode');
-  }
+  return {
+    enter() {
+      t = 0;
+      exitIn = -1;
+      next = 'intro';
+      slots = [];
+      okId = -1;
+      prompt = text.show('NEW HI', render.hudAnchor, { color: HUD_TEXT });
+      raiseSlot(0);
+    },
 
-  override exit(): void {
-    for (const s of this.#slots) { this.#drop(s.label, s.carrier); this.#world.despawnActor(s.id); }
-    this.#slots = [];
-    if (this.#okId >= 0) this.#world.despawnActor(this.#okId);
-    this.#okId = -1;
-    this.#dropOk();
-    this.#text.remove(this.#prompt);
-    this.#exitIn = -1;
-  }
+    update(delta: number): void {
+      world.update(delta); // ticks the actor rise + the sparkle bursts
+      t += delta;
+
+      if (exitIn >= 0) {
+        exitIn -= delta;
+        if (exitIn <= 0) ctx.change(next);
+        return;
+      }
+
+      const c = charNow();
+      for (const s of slots) {
+        if (s.locked || s.char === c) continue;
+        s.char = c;
+        text.setText(s.label, c);
+      }
+    },
+
+    select(cmd: SelectCommand): void {
+      if (exitIn >= 0) return;
+
+      _o.setFromMatrixPosition(cmd.transform.matrixWorld);
+      _d.set(0, 0, -1).transformDirection(cmd.transform.matrixWorld);
+      const hit = world.hitTestActor(_ray.set(_o, _d), cmd.reach || undefined);
+      if (!hit) return;
+      const id = hit.id;
+
+      if (id === okId) { confirm(); return; }
+
+      const s = slots.find((x) => x.id === id);
+      if (!s) return;
+      const i = slots.indexOf(s);
+
+      if (s.locked) {
+        s.locked = false;
+        world.recolorActor(s.id, RAINBOW[PAIR[i][0]]);
+        if (okId >= 0 && lockedCount() < 3) sinkOk(); // fewer than 3 locked -> OK goes away
+      } else {
+        s.locked = true;
+        world.recolorActor(s.id, RAINBOW[PAIR[i][1]]);
+        if (i < 2 && slots.length === i + 1) raiseSlot(i + 1);
+        else if (slots.length === 3 && lockedCount() === 3 && okId < 0) raiseOk();
+      }
+    },
+
+    exit(): void {
+      for (const s of slots) { drop(s.label, s.carrier); world.despawnActor(s.id); }
+      slots = [];
+      if (okId >= 0) world.despawnActor(okId);
+      okId = -1;
+      dropOk();
+      text.remove(prompt);
+      exitIn = -1;
+    },
+  };
 }

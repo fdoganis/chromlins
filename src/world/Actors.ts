@@ -90,13 +90,6 @@ export class Actors {
     return removed;
   }
 
-  // Collect a random live Chromlin — keyboard fallback with no real aim. Skips
-  // the decoy: a keypress should never trigger the unicorn penalty.
-  despawnAny(): RemovedActor | null {
-    const up = this.#chromlins.filter((c) => c.active);
-    return up.length ? this.despawn(this.#idOf(up[(Math.random() * up.length) | 0])) : null;
-  }
-
   recolor(id: number, hex: string): void { this.#at(id)?.recolor(hex); }
 
   // Advances every live rig. Returns the number of Chromlins that sank unhit this
@@ -109,10 +102,6 @@ export class Actors {
   }
 
   clear(): void { for (const a of this.#cast) a.hide(); }
-
-  // ?tweak only: hide every live rig so the panel / scheduler re-shows it with
-  // the current knob values (spring knobs are read live; layout knobs need this).
-  respawnAll(): void { if (__DEV__) this.clear(); }
 
   dispose(): void {
     this.clear();

@@ -1,23 +1,12 @@
-import { BoxGeometry, OctahedronGeometry, SphereGeometry, Matrix4, Vector3, Quaternion, Color, MeshPhongMaterial, MeshMatcapMaterial, MeshStandardMaterial } from 'three';
-import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+import { BoxGeometry, Matrix4, Vector3, Quaternion, Color, MeshPhongMaterial } from 'three';
 import type { Scene, PerspectiveCamera, Material, BufferGeometry } from 'three';
 import type { ITransform } from '../../../types/ITransform';
 import type { ITextEngine, TextStyle } from '../../ITextEngine';
 import { InstancedPool } from '../../../rendering/InstancedPool';
 import { billboard } from '../billboard';
-import { makeMatcap } from './matcap';
-import { makeEnvMap } from './envmap';
-import { GLYPH_SOURCE, VOXEL_SHADING, VOXEL_SHAPE } from '../../../game.config';
 import type { IGlyphSource } from '../../glyphs/IGlyphSource';
 import { BitmapGlyphs } from '../../glyphs/BitmapGlyphs';
 import { LIGHT_FONT } from '../../glyphs/light-font';
-import { FULL_FONT } from '../../glyphs/full-font';
-import { SQUARE6_FONT } from '../../glyphs/square6-font';
-import { ROUND6_FONT } from '../../glyphs/round6-font';
-import { THICK8_FONT } from '../../glyphs/thick8-font';
-import { MINOGRAM_FONT } from '../../glyphs/minogram-font';
-import { MONOGRAM_FONT } from '../../glyphs/monogram-font';
-import { CanvasGlyphs } from '../../glyphs/CanvasGlyphs';
 
 // Every label's voxels are indices into one shared InstancedPool (see
 // rendering/InstancedPool.ts) — allocating N indices, not spawning N
@@ -35,9 +24,8 @@ type VoxelHandle = {
 
 const FULL_LABEL_COLOR = '#ff3333';
 
-// Exported so the DEV-only ?tweak panel can bind a lil-gui folder to it. `fill`
-// is read every frame (live); `floatHeight` is captured when a label is created.
-export const textKnobs = {
+// `fill` is read every frame (live); `floatHeight` is captured when a label is created.
+const textKnobs = {
   fill: 0.75,        // cube size as a fraction of the grid step: <1 leaves a visible gap between voxels
   floatHeight: 0.08, // metres a label hovers above its anchor
 };
@@ -58,29 +46,10 @@ export class VoxelTextEngine implements ITextEngine {
   constructor(scene: Scene, camera: PerspectiveCamera, voxelSize = 0.008, maxInstances = 1024 * 1024) {
     this.#camera = camera;
     this.#voxelSize = voxelSize;
-    // VOXEL_SHADING / VOXEL_SHAPE are literal consts — the unpicked material,
-    // geometry, and their texture builders fold away and tree-shake.
-    const material: Material =
-      VOXEL_SHADING === 'env' ? new MeshStandardMaterial({ envMap: makeEnvMap(), metalness: 1, roughness: 0.18 }) :
-      VOXEL_SHADING === 'matcap' ? new MeshMatcapMaterial({ matcap: makeMatcap() }) :
-      new MeshPhongMaterial({ shininess: 200 });
-    const geometry: BufferGeometry =
-      VOXEL_SHAPE === 'octa' ? new OctahedronGeometry(0.7, 0) :
-      VOXEL_SHAPE === 'sphere' ? new SphereGeometry(0.5, 8, 6) :
-      VOXEL_SHAPE === 'roundedbox' ? new RoundedBoxGeometry(1, 1, 1, 2, 0.2) :
-      new BoxGeometry(1, 1, 1);
+    const material: Material = new MeshPhongMaterial({ shininess: 200 });
+    const geometry: BufferGeometry = new BoxGeometry(1, 1, 1);
     this.#pool = new InstancedPool(scene, geometry, maxInstances, material);
-    // GLYPH_SOURCE is a literal const — the branches not picked fold away and
-    // their font data / canvas code tree-shake out of the build.
-    this.#glyphs =
-      GLYPH_SOURCE === 'canvas' ? new CanvasGlyphs() :
-      GLYPH_SOURCE === 'full' ? new BitmapGlyphs(FULL_FONT) :
-      GLYPH_SOURCE === 'square6' ? new BitmapGlyphs(SQUARE6_FONT) :
-      GLYPH_SOURCE === 'round6' ? new BitmapGlyphs(ROUND6_FONT) :
-      GLYPH_SOURCE === 'thick8' ? new BitmapGlyphs(THICK8_FONT) :
-      GLYPH_SOURCE === 'minogram' ? new BitmapGlyphs(MINOGRAM_FONT) :
-      GLYPH_SOURCE === 'monogram' ? new BitmapGlyphs(MONOGRAM_FONT) :
-      new BitmapGlyphs(LIGHT_FONT);
+    this.#glyphs = new BitmapGlyphs(LIGHT_FONT);
   }
 
   create(text: string, anchor?: ITransform, style?: TextStyle): VoxelHandle {
