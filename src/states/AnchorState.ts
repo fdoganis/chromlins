@@ -5,7 +5,6 @@ import type { SelectCommand } from '../commands/SelectCommand';
 import { HUD_TEXT } from '../core/palette';
 
 const FLOOR_DIST_m = 0.6; // where the board lands when placed on the floor
-const DEV_SKIP_S = 8;     // dev/test only: no reticle ever → floor-place and go
 
 const _v = new Vector3();
 const _UP = new Vector3(0, 1, 0);
@@ -94,7 +93,10 @@ export function makeAnchor(ctx: Game): Screen {
       if (done) return;
 
       waited += delta;
-      if (__DEV__ && waited > DEV_SKIP_S && !sawReticle) { placeOnFloor(); return; }
+      // Some ARKit-based iOS WebXR polyfills grant 'hit-test' but never actually
+      // surface a pose; give up on the reticle after 8s and fall into the same
+      // manual-placement path as no hit-test support at all.
+      if (!noHitTest && !sawReticle && waited > 8) { setNoHitTest(); return; }
 
       if (!frame) return;
 
