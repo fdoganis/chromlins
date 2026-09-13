@@ -1,23 +1,29 @@
-# gamma
+# Chromlins
 
-A WebXR Game starter kit in TypeScript, providing essentials such as input management and a game loop.
+A WebXR AR whack-a-mole game for js13k 2026. Color spirits, the Chromlins,
+have stolen the seven colors of the rainbow and hidden a unicorn. Find them
+peeking out of holes in your real table and tap them to take the colors
+back; leave the unicorn alone.
 
-Inspired by [three_vite_xr_ts](https://github.com/fdoganis/three_vite_xr_ts) and https://www.gameprogrammingpatterns.com.
+Built on [gamma](https://github.com/fdoganis/gamma), a WebXR engine by the
+same author. If you're looking to build your own game rather than fork this
+one, start there instead.
 
+## The story
+
+The seven colors of the rainbow have been stolen by the Chromlins, mischievous
+color spirits who hide in holes in your table and peek out just long enough
+to taunt you. Each one carries a single stolen color. Tap a Chromlin and its
+color returns to the rainbow for good, it never comes back to steal again.
+
+A unicorn is trapped among them too, peeking out just like the Chromlins do.
+Leave it alone. Tapping the unicorn undoes your progress instead of helping
+it, and only makes the Chromlins bolder.
+
+Clear all seven colors before the timer runs out and the rainbow is restored.
+Miss the timer, and the Chromlins keep their haul. Try again.
 
 **NOTE**: TypeScript is only used to enforce type checks while coding. All types are simply erased by the transpiler. See `tsconfig.json` and this [article](https://www.sitepoint.com/typescript-58-erasable-syntax-running-ts-directly-in-nodejs/) to understand how this works.
-
-## Batteries included
-
-Pre-configured to support :
-
-- WebXR initialization
-- VSCode launch scripts
-- THREE.js type definitions : for IntelliSense in VS Code
-- recommended VS Code extensions
-- deployment
-
-Have a look at `vite.config.js` and customize it to your needs (additional libraries, file formats etc.).
 
 ## Installation
 
@@ -123,13 +129,15 @@ npm run build
 This will create a `dist` folder containing the static files for the app. You can then upload these files to your hosting platform of choice.
 
 
+# License
+
+All rights reserved, see `LICENSE`. Published so the game and its source can
+be reviewed, played, and judged for js13k 2026. The engine it's built on,
+[gamma](https://github.com/fdoganis/gamma), is separately MIT licensed, see
+gamma's own README for its engine-level credits (three_vite,
+webxr-first-steps, etc.).
+
 # Credits
 
-- XR enhanced version of the original ```three_vite``` template : https://github.com/fdoganis/three_vite (MIT License)
-  
-- THREE.js WebXR code inspired by https://threejs.org/examples/webxr_ar_cones.html (MIT License)
-
-- Some very interesting features (emulator, github pages deployment) have been borrowed from https://github.com/meta-quest/webxr-first-steps  (MIT License)
-
-  - Make sure to check this excellent tutorial out! Even if it is mostly focused on VR, it is a great introduction on how to combine WebXR with THREE.js.
-  - See [Deployment Instructions](https://github.com/meta-quest/webxr-first-steps?tab=readme-ov-file#build-and-deploy)
+Third-party code and assets bundled into this specific game, see
+[`CREDITS.md`](./CREDITS.md).
