@@ -32,6 +32,12 @@ export class InputManager {
     this.#processor.add(this.xrRight);
     this.#processor.add(this.handLeft);
     this.#processor.add(this.handRight);
+
+    // A select queued in the last frame before the session ends would never be
+    // drained, and would fire on the first frame of the *next* session. Clear
+    // on session end rather than on input-source disconnect: disconnect is
+    // routine mid-tap for handheld AR (see SpatialInputSource).
+    renderer.xr.addEventListener('sessionend', () => this.#processor.clear());
   }
 
   get commands() { return this.#processor.commands; }

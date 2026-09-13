@@ -10,7 +10,6 @@ export class SpatialInputSource extends InputSource {
   constructor(node: Group) {
     super();
     this.#node = node;
-    node.addEventListener('disconnected', this.#onDisconnected);
   }
 
   get node(): Group { return this.#node; }
@@ -25,12 +24,14 @@ export class SpatialInputSource extends InputSource {
     this.#node.addEventListener(event, handler);
   }
 
-  #onDisconnected = () => {
-    this.queue.length = 0;
-  };
-
+  // Deliberately no 'disconnected' handler dropping queued commands. A
+  // handheld-AR tap is a transient input source: it connects, fires select and
+  // disconnects again inside the one touch, before the next frame drains the
+  // queue, so clearing on disconnect silently ate every phone-AR tap. A select
+  // that already fired is a finished action; the source going away afterwards
+  // doesn't retract it. InputManager clears on session end instead, which is
+  // the case that guard was actually worth keeping.
   dispose() {
-    this.#node.removeEventListener('disconnected', this.#onDisconnected);
     for (const event of Object.keys(this.#handlers) as XRBindableEvent[])
       this.#node.removeEventListener(event, this.#handlers[event]!);
   }

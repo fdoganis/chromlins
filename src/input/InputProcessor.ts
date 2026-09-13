@@ -21,5 +21,9 @@ export class InputProcessor {
     }
   }
 
+  // Drop anything queued but never drained, so input from one session can't
+  // leak into the next one.
+  clear() { for (const src of this.#sources) src.queue.length = 0; }
+
   dispose() { for (const src of this.#sources) src.dispose(); }
 }
