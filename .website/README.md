@@ -26,8 +26,8 @@ Due to size constraints, the published game only supports a few AR devices, but 
 
 You can also play on your mobile phone:
 
-- Android; make sure to have a recent version of Chrome
-- iPhone: open the web page in yourWebXR browser of choice (search the app store for WebXR. I recommend the excellent Hello XR or the OG: Mozilla's XR Viewer)
+- Android: make sure to have a recent version of Chrome
+- iPhone: open the web page in yourWebXR browser of choice (search the App Store for WebXR. I recommend the excellent Hello XR or the OG: Mozilla's XR Viewer)
 
 You can play on your desktop, although definitely not the best experience
 
