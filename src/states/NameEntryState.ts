@@ -114,7 +114,7 @@ export function makeNameEntry(ctx: Game): Screen {
     okId = -1;
 
     if (name === L13_NAME) {
-      try { localStorage.setItem('gamma.l13', '1'); } catch { /* not persisted */ }
+      try { localStorage.setItem('chromlins.l13', '1'); } catch { /* not persisted */ }
       text.setText(prompt, '13 UNLOCKED');
       level.set(13);
       next = 'run'; // straight into the L13 run after the beat

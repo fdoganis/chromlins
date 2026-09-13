@@ -1,4 +1,4 @@
-// Packs dist/index.html into build/gamma.zip with a Zopfli-recompressed DEFLATE
+// Packs dist/index.html into build/chromlins.zip with a Zopfli-recompressed DEFLATE
 // stream — ~475 B under `zip -9` on this payload, ~12 B off native advzip, with
 // no binary or postinstall download (see .doc/GNOMES.md §5.9). Fails non-zero if
 // the zip is at/over the js13kGames 13,312-byte limit.
@@ -8,7 +8,7 @@ import zopfli from '@gfx/zopfli';
 
 const SRC = 'dist/index.html';
 const ENTRY = 'index.html';
-const OUT = 'build/gamma.zip';
+const OUT = 'build/chromlins.zip';
 const LIMIT = 13312;
 const ITERATIONS = 15; // 1000 saves ~4 B here — not worth the wait
 

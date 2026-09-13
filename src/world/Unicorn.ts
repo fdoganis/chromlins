@@ -8,7 +8,8 @@
 // out of the capsule by `margin` so nothing ends up buried. Rigid tube strands
 // on cheap angular springs. Shape/motion knobs are baked to their final,
 // locked literal values for this fork's byte budget — no more `Unicorn.tune`
-// object; tune the look in gamma's groom studio instead, then re-bake here.
+// object; tune the look in the upstream gamma repo's groom studio instead
+// (this fork doesn't carry its own copy), then re-bake the values here.
 import {
   Mesh, MeshPhongMaterial, MeshBasicMaterial, CylinderGeometry, SphereGeometry,
   TubeGeometry, CatmullRomCurve3, Vector3, MathUtils, type Object3D,

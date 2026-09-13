@@ -36,5 +36,5 @@ export const L13: LevelConfig = {
 };
 
 export function l13Unlocked(): boolean {
-  try { return localStorage.getItem('gamma.l13') === '1'; } catch { return false; }
+  try { return localStorage.getItem('chromlins.l13') === '1'; } catch { return false; }
 }

@@ -1,6 +1,6 @@
 // The all-time best score + its 3-letter name, in localStorage. Owned by Game,
 // shown in the HUD, written by NameEntryState. Mirrors Score / Level.
-const KEY = 'gamma.hi';
+const KEY = 'chromlins.hi';
 
 export class HiScore {
   #score = 0;
