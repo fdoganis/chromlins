@@ -10,7 +10,7 @@ const SRC = 'dist/index.html';
 const ENTRY = 'index.html';
 const OUT = 'build/chromlins.zip';
 const LIMIT = 13312;
-const ITERATIONS = 15; // 1000 saves ~4 B here — not worth the wait
+const ITERATIONS = Number(process.env.ZIP_ITER ?? 15); // ZIP_ITER=1000 saves ~4-7 B, ~3s slower — use it for the release artifact
 
 const body = readFileSync(SRC);
 const deflated = await zopfli.deflateAsync(body, { numiterations: ITERATIONS }); // raw DEFLATE, no header
