@@ -145,6 +145,7 @@ export function makeRun(ctx: Game): Screen {
       audio.stopBGM();
       audio.deactivate();
       world.clearSparkles(); // else the winning hit's burst freezes on the Win screen
+      world.clearActors(); // else whatever's mid-rise/hold/sink keeps its hole occupied
       scoring.teardown();
       if (timerLabel) { text.remove(timerLabel); timerLabel = null; }
     },

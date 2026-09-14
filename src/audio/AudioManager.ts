@@ -64,18 +64,18 @@ export class AudioManager {
   constructor(camera: PerspectiveCamera) {
     this.#listener = new AudioListener();
     camera.add(this.#listener);
+  }
 
-    // The AudioContext above is created right now, on page load, with no user
-    // gesture yet — every browser (Safari strictest) starts it 'suspended'.
-    // RunState's own activate() call is too late to count as gesture-driven on
-    // some browsers: it fires after XR session setup plus at least one WebXR
-    // select event, several async hops past the original click. Resume on the
-    // very first pointer interaction anywhere, which always includes the
-    // "START XR" button press itself — the one gesture every browser accepts.
-    const resumeOnce = () => {
-      if (this.context.state === 'suspended') this.context.resume();
-    };
-    window.addEventListener('pointerdown', resumeOnce, { once: true });
+  // The AudioContext above is created right now, on page load, with no user
+  // gesture yet, so every browser (Safari strictest) starts it 'suspended'.
+  // RunState's own activate() call is too late to count as gesture-driven on
+  // some browsers: it fires after XR session setup plus at least one WebXR
+  // select event, several async hops past the original click. Game hangs
+  // this directly off the "START XR" button, the one gesture every browser
+  // accepts, instead of a generic first-interaction-anywhere listener, so
+  // there's no ambiguity about which gesture it's riding on.
+  unlock(): void {
+    this.context.resume(); // no-op if already running
   }
 
   get context(): AudioContext { return this.#listener.context; }

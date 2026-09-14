@@ -70,6 +70,7 @@ export class RenderingManager {
   timerAnchor: Group; // child of anchor: pinned to the placed surface, not the camera; VoxelTextEngine still billboards it to face the viewer
   scoreAnchor: Group; // child of anchor: upper-left of the rainbow, world-space
   hiAnchor: Group;    // child of anchor: upper-right — the persistent "HI ####"
+  xrButton: HTMLElement; // exposed so Game can hang the audio-unlock gesture directly off it
 
 
   constructor() {
@@ -92,9 +93,9 @@ export class RenderingManager {
     const sessionInit: XRSessionInit = {
       optionalFeatures: ['hit-test', 'hand-tracking'],
     };
-    const btn = xrButton(this.renderer, sessionInit);
-    btn.style.backgroundColor = 'skyblue';
-    document.body.appendChild(btn);
+    this.xrButton = xrButton(this.renderer, sessionInit);
+    this.xrButton.style.backgroundColor = 'skyblue';
+    document.body.appendChild(this.xrButton);
 
     this.scene = new Scene();
     this.anchor = new Group();

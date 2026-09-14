@@ -122,9 +122,18 @@ export class World {
     this.#sparkles.clear();
   }
 
-  // Drop any in-flight burst without touching the board/rainbow — for round end,
+  // Drop any in-flight burst without touching the board/rainbow, for round end,
   // where update() stops and a live burst would otherwise freeze on screen.
   clearSparkles(): void { this.#sparkles.clear(); }
+
+  // Hide every live actor and free their holes, without touching the
+  // rainbow/scoring state, for round end, so whatever was mid-rise/hold/sink
+  // the instant the timer hit zero doesn't keep occupying its hole all the way
+  // through Game Over/Win and into whatever needs a hole free next (name
+  // entry's first letter spawns at a fixed hole and silently no-ops if it
+  // isn't). Actor.hide() frees its own hole as a side effect, so this alone
+  // is enough, no separate board reset needed.
+  clearActors(): void { this.#actors.clear(); }
 
   dispose(): void {
     this.#actors.dispose();

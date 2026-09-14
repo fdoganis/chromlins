@@ -56,6 +56,10 @@ export class Game {
     this.#sm = this.#buildStates();
 
     this.#bindInput();
+
+    // The "START XR" button press is the one gesture every browser accepts as
+    // audio-unlocking, see AudioManager.unlock().
+    this.rendering.xrButton.addEventListener('click', () => this.audio.unlock());
   }
 
   // Dev: `?run` skips Intro/Placing and drops the board in front of the default
