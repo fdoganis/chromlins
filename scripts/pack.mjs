@@ -20,8 +20,10 @@
 //                 extra dependency. closure: Google Closure Compiler ADVANCED
 //                 structure-only (inline / DCE / devirtualise, every property
 //                 protected from renaming — renaming fights roadroller), then a
-//                 light terser pass for the `/^_/` former-privates. ~-460 B on
-//                 the final zip vs terser (.doc/DECISIONS.md D9); needs the
+//                 real terser compress+mangle pass on top (Closure alone still
+//                 leaves things on the table — it runs on vite's already-
+//                 minified output, not clean source). ~-460 B on the final zip
+//                 vs terser (.doc/DECISIONS.md D9); needs the
 //                 google-closure-compiler devDep's platform binary. Use it, with
 //                 PACK_O=2, for the submission.
 import { readFileSync, writeFileSync } from 'node:fs';
@@ -117,10 +119,14 @@ async function closureMinify(src, aliases) {
   for (const [c, n] of [...buckets].sort((a, b) => b[1] - a[1])) console.error(`  ${String(n).padStart(4)}  ${c}`);
   if (total) console.error('  full text: dist/closure-warnings.log');
 
-  // Only the `/^_/` former-private mangle — Closure protect-all leaves those
-  // long; no compress pass (Closure already did the structural work, ~0 here).
+  // Closure ADVANCED already does its own structural work (inline/DCE), but it
+  // runs on vite's own pre-minified esbuild output rather than clean source, and
+  // measurably still leaves things a real terser compress pass picks up (e.g. a
+  // single-use local const that never got folded into its one use site).
+  // A compress:false pass here used to leave ~20-25 B on the table. Same
+  // compress options as the plain terser mode below; safe, no `unsafe*` flags.
   return (await minify(cc.stdout, {
-    module: true, compress: false,
+    module: true, compress: { passes: 3 },
     mangle: { toplevel: true, properties: { regex: /^_/ } },
     format: { comments: false },
   })).code;

@@ -7,11 +7,6 @@ export class InputProcessor {
 
   add(source: InputSource) { this.#sources.push(source); }
 
-  remove(source: InputSource) {
-    const i = this.#sources.indexOf(source);
-    if (i !== -1) this.#sources.splice(i, 1);
-  }
-
   collect() {
     this.commands.length = 0;
     for (const src of this.#sources) {
@@ -20,6 +15,10 @@ export class InputProcessor {
       src.queue.length = 0;
     }
   }
+
+  // Drop anything queued but never drained, so input from one session can't
+  // leak into the next one.
+  clear() { for (const src of this.#sources) src.queue.length = 0; }
 
   dispose() { for (const src of this.#sources) src.dispose(); }
 }

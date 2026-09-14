@@ -44,6 +44,13 @@ function xrButton(renderer: WebGLRenderer, sessionInit: XRSessionInit): HTMLElem
       ...sessionInit,
       optionalFeatures: ['local-floor', 'bounded-floor', 'layers', ...(sessionInit.optionalFeatures ?? [])]
     };
+    // AR sessions should genuinely support hit-test; some ARKit-based iOS WebXR
+    // polyfills only fully arm their plane-detection pipeline when a feature is
+    // required at request time, not merely optional, granting it but never
+    // producing a pose otherwise (see AnchorState's own 8s fallback for when
+    // this happens anyway). VR never supports hit-test at all, so it stays
+    // optional-only there, that's the whole reason it left requiredFeatures.
+    if (mode === 'immersive-ar') sessionOptions.requiredFeatures = ['hit-test'];
     let session: XRSession | null = null;
     btn.disabled = false;
     btn.style.cursor = 'pointer';
