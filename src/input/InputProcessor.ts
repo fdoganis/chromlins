@@ -7,11 +7,6 @@ export class InputProcessor {
 
   add(source: InputSource) { this.#sources.push(source); }
 
-  remove(source: InputSource) {
-    const i = this.#sources.indexOf(source);
-    if (i !== -1) this.#sources.splice(i, 1);
-  }
-
   collect() {
     this.commands.length = 0;
     for (const src of this.#sources) {
