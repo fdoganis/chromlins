@@ -26,7 +26,7 @@
 //                 vs terser (.doc/DECISIONS.md D9); needs the
 //                 google-closure-compiler devDep's platform binary. Use it, with
 //                 PACK_O=2, for the submission.
-import { readFileSync, writeFileSync } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { transformSync } from '@babel/core';
 import { minify } from 'terser';
@@ -84,7 +84,33 @@ async function closureMinify(src, aliases) {
   const plat = process.platform === 'darwin' ? 'macos' : process.platform === 'win32' ? 'windows' : 'linux';
   const bin = `node_modules/google-closure-compiler-${plat}/compiler${plat === 'windows' ? '.exe' : ''}`;
 
-  const names = collectProtectedNames(src);
+  // PACK_EXTERNS=all (default): protect every property name we use, so Closure
+  // renames nothing. Safe, but it also blocks Closure from DROPPING unreachable
+  // members, which is why dead code has to be deleted by hand.
+  //
+  // PACK_EXTERNS=three: protect only three.js's API surface (generated from
+  // @types/three by scripts/gen-three-externs.mjs) plus the browser dictionary
+  // keys, and let Closure rename and dead-code-eliminate everything of ours.
+  // The gamble: renaming has historically fought roadroller's repetition model,
+  // so this only wins if the DCE gain beats that loss. Measure, don't assume.
+  const mode = process.env.PACK_EXTERNS ?? 'all';
+  let names;
+  if (mode === 'three') {
+    const f = 'build/three.externs.js';
+    if (!existsSync(f)) {
+      // Regenerate rather than ask the caller to: it is derived entirely from
+      // node_modules, so it's a build artifact, not something to hand-maintain.
+      const gen = spawnSync(process.execPath, ['scripts/gen-three-externs.mjs'], { encoding: 'utf8', maxBuffer: 32 * 1024 * 1024 });
+      if (gen.status !== 0) throw new Error('pack: could not generate three externs:\n' + (gen.stderr || ''));
+      mkdirSync('build', { recursive: true });
+      writeFileSync(f, gen.stdout);
+      console.error(`closure externs: generated ${f}`);
+    }
+    names = new Set(readFileSync(f, 'utf8').matchAll(/^\$three\.([\w$]+);$/gm).map((m) => m[1]));
+  } else {
+    names = collectProtectedNames(src);
+  }
+  console.error(`closure externs: mode=${mode}, ${names.size} protected names`);
   const externs = '/** @externs */\n' +
     aliases.map((a) => `var ${a};`).join('\n') + '\n' +
     'var $p;\n' + [...names].map((n) => `$p.${n};`).join('\n') + '\n';
