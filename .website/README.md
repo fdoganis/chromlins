@@ -1,4 +1,5 @@
 ---
+post: https://github.com/fdoganis/chromlins/blob/main/post/POST.md
 directors_cut: https://github.com/fdoganis/chromlins
 video: https://youtu.be/-jw1h-sc2Ng
 # See github.com/js13kGames/hello-world for supported frontmatter
