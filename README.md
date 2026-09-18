@@ -35,6 +35,50 @@ Install [Node.js](https://nodejs.org)
   - Edit your code : your changes are reflected instantly!
 - `npm run build` : packages all code and resources into the `dist` folder, ready for deployment.
 
+## Fitting in 13 kB
+
+js13k allows 13,312 bytes, zipped. `npm run build` alone does not get there, the
+packing pipeline does.
+
+- `npm run pack` : build, then minify through Closure, pack with roadroller and
+  zip with Zopfli, into `build/chromlins.zip`. This is the artifact that ships.
+  It prints the final size and fails if it is at or over the limit.
+- `npm run pack:fast` : same, but the quick settings, for iterating. A few
+  hundred bytes larger, so never use it to judge whether you fit.
+- `npm run deadcode` : lists class members nothing reachable ever calls. Add
+  `--safe` for the ones you can delete in place with no caller to edit, or
+  `--tree` to see each dead root with everything only it keeps alive.
+
+Two things worth knowing before you try to save bytes:
+
+**The size drifts by 10-20 bytes between identical builds.** Closure and
+roadroller both make non-deterministic choices. If you land a few bytes over,
+re-run `npm run pack`, that is normal practice here, not cheating.
+
+**Shortening text saves nothing.** Cutting 10 characters of on-screen wording
+measured 2 bytes: roadroller compresses prose almost for free. Bytes come from
+removing whole behaviours, not from shortening strings.
+
+### `PACK_EXTERNS=three` (opt-in, ~360 bytes)
+
+    PACK_EXTERNS=three npm run pack
+
+By default the packer protects every property name in the code from being
+renamed, which also prevents Closure from *removing* anything unreachable. This
+mode instead protects only what is genuinely external, three.js's API and the
+WebXR/browser surface, generated automatically from `@types/three` and
+`@types/webxr`. Closure is then free to rename and drop our own dead code by
+itself, worth about 360 bytes here with no source changes.
+
+It is opt-in because a renaming mistake fails **silently at runtime**, not at
+build time. `npm run smoke` will not catch it, it never enters an XR session.
+Always verify with `npx playwright test tests/packed.spec.ts`, which drives the
+real packed artifact through a round, and test on a device before shipping.
+
+If you add a library whose API the browser reads but bundled code does not, add
+its types to `ROOTS` in `scripts/gen-three-externs.mjs`, or its dictionary keys
+to the `BROWSER_KEYS` list there.
+
 ## HTTPS
 
 HTTPS is required to use the WebXR API
@@ -96,6 +140,45 @@ Check these tunneling alternatives such as `ngrok` or `zrok` for simple personal
 In order to use `https`, copy your certificates to the `.cert` folder, and change the `serve` command to:
 
 `"serve": "http-server dist -S -C .cert/cert.pem -K .cert/key.pem`
+
+## Testing a packed build on a real device
+
+`npm run dev` serves live, unminified source, which is what you want while
+writing code, but it is not what ships. Before trusting that a change works,
+test the actual packed artifact (the same `build/chromlins.zip` a player or a
+judge would get) on a real headset or phone:
+
+```bash
+npm run pack                       # or e.g. PACK_EXTERNS=three npm run pack
+npm run device-test                # unzips it and serves it on port 5173
+```
+
+Then, in another terminal:
+
+```bash
+npm run cloud
+```
+
+`cloudflared` prints a `*.trycloudflare.com` URL, open that on the device (or
+turn it into a QR code) and press "START XR".
+
+`device-test` auto-generates a full command list; the short version of what it
+does: unzips `build/chromlins.zip` into a scratch folder, frees port 5173 if
+something else (a previous run, a stray `npm run dev`) is already holding it,
+and serves that folder there, since `npm run cloud` always tunnels that
+specific port. Ctrl+C to stop it. Pass a different zip path as an argument
+(`npm run device-test -- path/to/other.zip`) to test something other than the
+default build.
+
+**Why this matters, not just `npm run smoke`:** the smoke test never opens a
+WebXR session, so it happily passes on a build where XR is completely broken.
+A packed build changes real things a dev build doesn't exercise the same way,
+minification, the roadroller unpacking step, and (if `PACK_EXTERNS=three` is
+in play) whether a property got renamed out from under a call site. The closest
+automated equivalent is `npx playwright test tests/packed.spec.ts`, which
+drives an emulated controller through a real round on the packed artifact, but
+an emulator is not every browser: this project's mobile-AR select bug (see
+`.doc/DECISIONS.md`) only ever showed up on a real device.
 
 ## Deploying the App with GitHub Pages
 
