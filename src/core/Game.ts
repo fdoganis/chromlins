@@ -43,7 +43,7 @@ export class Game {
 
   constructor() {
     this.rendering = new RenderingManager();
-    this.audio = new AudioManager(this.rendering.camera);
+    this.audio = new AudioManager(this.rendering.camera, this.rendering.anchor);
     this.world = new World(this.rendering.anchor, this.audio, this.rendering.camera);
     this.haptics = new Haptics(this.rendering.renderer);
     this.#input = new InputManager(this.rendering.renderer, this.rendering.scene, this.rendering.anchor);

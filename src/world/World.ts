@@ -1,7 +1,9 @@
 // Facade over the scene pieces RunState talks to: the socket grid (Gameboard),
 // the bodies that rise from it (Actors), the Rainbow gauge, and the Sparkles
-// pool — all parented to the placed anchor. Adds only the non-positional cues;
-// no game rules (cadence, colors, scoring) live here.
+// pool — all parented to the placed anchor. Adds only the actor-emitted cues
+// (spawn/hit/unicorn, via AudioManager.playAt); board-wide cues (win/over/
+// tick/music) are RunState/WinState/GameOverState's own playSFX/playBGM calls.
+// No game rules (cadence, colors, scoring) live here.
 import { Color } from 'three';
 import type { Object3D, Vector3, Ray, PerspectiveCamera } from 'three';
 

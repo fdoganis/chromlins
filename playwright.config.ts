@@ -4,6 +4,9 @@ import { defineConfig, devices } from '@playwright/test';
 // Nothing here is bundled — @playwright/test is a devDependency only.
 export default defineConfig({
   testDir: './tests',
+  // tests/unit/ is plain node:test (see npm run test:unit), not a Playwright
+  // spec — it has no @playwright/test import and would fail if collected here.
+  testIgnore: ['**/unit/**'],
   // The two IWER specs each drive a full WebXR-emulated render loop + a long
   // screenshot sweep. Run in parallel they oversubscribe the CPU and starve
   // each other into timeouts, so the 4-test suite runs serially — deterministic

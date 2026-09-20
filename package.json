@@ -20,7 +20,8 @@
     "smoke": "node scripts/smoke.mjs",
     "device-test": "node scripts/serve-packed.mjs",
     "test:e2e": "playwright test",
-    "test:packed": "playwright test tests/packed.spec.ts"
+    "test:packed": "playwright test tests/packed.spec.ts",
+    "test:unit": "node --experimental-strip-types --test tests/unit/*.test.mjs"
   },
   "devDependencies": {
     "@babel/core": "^8.0.1",

@@ -3,6 +3,7 @@ import { execFileSync } from 'node:child_process';
 import { createServer, type Server } from 'node:http';
 import { readFileSync } from 'node:fs';
 import * as path from 'node:path';
+import { renderCue } from './lib/render-cue.mjs';
 
 // Validates the SHIPPED packed artifact, not `npm run dev`. The other e2e specs
 // drive the un-minified dev bundle; this one builds a production bundle, runs it
@@ -218,5 +219,30 @@ test('packed artifact: an emulated controller plays a round and fills the rainbo
   const after = await page.screenshot({ clip: RAINBOW_BAND });
 
   expect(Buffer.compare(before, after), 'rainbow band changed — the packed build ran a real collect').not.toBe(0);
+
+  // 5b. World.ts plays 'spawn' every time an actor rises and 'hit' every time
+  // a ray-select connects, both through playAt (PositionalAudio), unlike
+  // 'win'/'over'/'tick' which go through the non-positional playSFX — a real,
+  // reported difference ("hit/spawn/unicorn don't seem to make any sound")
+  // this checks directly rather than assumes: with 8 rounds sweeping all 8
+  // holes just completed (the rainbow band changed, proving hits landed),
+  // both cues are guaranteed to have fired at least once. tests/unit/
+  // cues.test.mjs already proves neither cue's DATA renders silent; this
+  // proves the live PositionalAudio playback path actually reaches the
+  // listener in the real packed build, which that unit test cannot. Matched
+  // by exact duration (computed from the same CPlayer render, not a copied
+  // number) rather than just "any two sounds played", since it's not just
+  // "was there sound" that's in question — see .doc/DECISIONS.md D19.
+  // 'unicorn'/'win'/'over'/'tick' aren't checked here: unicorn is a ~12%
+  // per-tick roll (not guaranteed within one scripted round) and win/over/
+  // tick depend on the round's outcome/timing, neither reachable
+  // deterministically from this test's fixed script without flaking.
+  const finalAudioLog = await page.evaluate(() => (window as unknown as { __audio: { duration: number | null; loop: boolean }[] }).__audio);
+  for (const id of ['spawn', 'hit']) {
+    const expected = await renderCue(id);
+    const heard = finalAudioLog.some((a) => Math.abs((a.duration ?? -1) - expected.duration) < 0.001);
+    expect(heard, `cue "${id}" (expected duration ${expected.duration.toFixed(3)}s) never heard live (audio log: ${JSON.stringify(finalAudioLog)})`).toBe(true);
+  }
+
   expect(problems, 'no page errors from the packed build').toEqual([]);
 });
