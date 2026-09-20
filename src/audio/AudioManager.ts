@@ -29,6 +29,14 @@ const SFX_ROWLEN = 2205; // ~50 ms/row — snappy
 // Placeholder melodies for the short cues — a few SoundBox note ints each,
 // on redline's own instruments. `music` skips the placeholder shape
 // entirely and plays redline verbatim (`raw`).
+// This is a dictionary looked up by a dynamic string (CUES[id]), the same
+// shape as Game.ts's `screens` and the same real bug: PACK_EXTERNS=three
+// renamed spawn/hit/unicorn/tick/music (all of them, in the build actually
+// inspected) while the string literals passed to playSFX/playAt/playBGM
+// elsewhere stayed as-is, so every cue lookup silently missed, no sound, no
+// error. See gen-three-externs.mjs's OWN_DISPATCH_KEYS for the fix (these
+// keys protected explicitly) and why quoting them here instead does not
+// work in this pipeline (esbuild un-quotes them again before Closure runs).
 const CUES: Record<string, Cue> = {
   spawn:   { tracks: [{ inst: NOISE_HIT,  seq: [135] }] },
   hit:     { tracks: [{ inst: NOISE_HIT,  seq: [147, 0, 159] }], rowLen: 1500 },
@@ -167,7 +175,13 @@ export class AudioManager {
 
   #bufferFor(id: string, context: AudioContext): AudioBuffer | null {
     const cue = CUES[id];
-    if (!cue) return null;
+    // Every caller passes a hardcoded literal matching a real CUES key, so a
+    // missing cue is always a bug (a typo, or the renaming bug this project
+    // hit twice, see gen-three-externs.mjs), never a legitimate runtime
+    // condition. Throw instead of silently returning null: this call sits
+    // one line before the audio actually plays, so throwing surfaces the
+    // exact failure immediately instead of a generic "no sound" report.
+    if (!cue) throw new Error(`no such cue: ${id}`);
 
     let buffer = this.#buffers.get(id);
     if (!buffer) {

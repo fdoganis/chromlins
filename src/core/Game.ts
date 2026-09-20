@@ -73,6 +73,13 @@ export class Game {
     const debugL13 = __DEV__ && 'l13' in q;     // jump straight into the level 13 run
     const debugUni = __DEV__ && 'uni' in q;     // force the unicorn peeking (mane tuning + tests/mane.spec.ts)
 
+    // This is a dictionary looked up by a dynamic string (screens[cur]); see
+    // gen-three-externs.mjs's OWN_DISPATCH_KEYS for why PACK_EXTERNS=three
+    // needs these key names protected explicitly (quoting them here, Closure's
+    // own usual signal for "exempt from renaming", does NOT survive this
+    // pipeline: vite's esbuild minification runs first and normalizes a
+    // quoted-but-identifier-safe key straight back to unquoted, before
+    // Closure ever sees it, confirmed by inspecting pack.mjs's actual input).
     const screens: Record<string, Screen> = {
       intro: makeIntro(this),
       anchor: makeAnchor(this),

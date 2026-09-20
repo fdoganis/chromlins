@@ -62,11 +62,44 @@ test.afterAll(async () => {
 test('packed artifact: an emulated controller plays a round and fills the rainbow', async ({ page }) => {
   test.setTimeout(120_000);
 
+  // Logged immediately, not just collected for the final assert: a failure
+  // partway through (e.g. the enter()-visibility checks below) throws before
+  // that assert ever runs, and a silent runtime bug is exactly what these
+  // checks exist to catch, so seeing the real console output at the point of
+  // failure matters more than at the end of an already-failed test.
   const problems: string[] = [];
-  page.on('pageerror', (e) => problems.push(`pageerror: ${e}`));
-  page.on('console', (m) => { if (m.type() === 'error') problems.push(`console.error: ${m.text()}`); });
+  page.on('pageerror', (e) => { const s = `pageerror: ${e}`; problems.push(s); console.log(s); });
+  page.on('console', (m) => { if (m.type() === 'error') { const s = `console.error: ${m.text()}`; problems.push(s); console.log(s); } });
 
-  // 1. install IWER before the app boots
+  // 1. install IWER before the app boots, and tap the real Web Audio API so
+  // actual audio playback is observable from outside the packed bundle: it
+  // has no debug hook of its own, and headless Chromium's audio output isn't
+  // otherwise inspectable. Wrapping AudioContext.prototype.createBufferSource
+  // before the app's own script runs means every SoundBox-rendered buffer
+  // that actually starts playing gets logged, real duration and loop flag
+  // included, which is precise enough to tell a real BGM start (long,
+  // looping) from an SFX blip (short, one-shot) apart, and would have caught
+  // the CUES silent-miss bug directly: a missing/renamed cue makes
+  // #bufferFor throw now (see AudioManager.ts), which pageerror below
+  // catches, but before that fix existed it just played nothing, which this
+  // log would have shown as "audio.playBGM('music') ran, __audio stayed
+  // empty" instead of requiring a live device report to notice.
+  await page.addInitScript(() => {
+    // @ts-expect-error test hook
+    window.__audio = [];
+    const Ctx = window.AudioContext;
+    const origCreate = Ctx.prototype.createBufferSource;
+    Ctx.prototype.createBufferSource = function (...args) {
+      const src = origCreate.apply(this, args);
+      const origStart = src.start.bind(src);
+      src.start = (...startArgs) => {
+        // @ts-expect-error test hook
+        window.__audio.push({ t: performance.now(), duration: src.buffer?.duration ?? null, loop: src.loop });
+        return origStart(...startArgs);
+      };
+      return src;
+    };
+  });
   await page.addInitScript({ path: path.resolve('node_modules/iwer/build/iwer.min.js') });
   await page.addInitScript(() => {
     // @ts-expect-error injected UMD global
@@ -107,7 +140,7 @@ test('packed artifact: an emulated controller plays a round and fills the rainbo
     await new Promise((r) => setTimeout(r, 25));
     await d.remote.dispatch('set_select_value', { device: 'controller-right', value: 0 });
   }, { aim: AIM_DOWN });
-  await page.waitForTimeout(600); // #placeOnFloor → Intro (its own "START" prompt eats the loop's first select below)
+  await page.waitForTimeout(600); // #placeOnFloor → Intro
 
   // 4. drop to the standard viewing pose (board already placed; anchor won't move)
   await page.evaluate(async () => {
@@ -116,6 +149,53 @@ test('packed artifact: an emulated controller plays a round and fills the rainbo
     await d.remote.dispatch('look_at', { device: 'headset', position: { x: 0, y: 0.55, z: 0.35 }, target: { x: 0, y: 0.12, z: -0.6 } });
   });
   await page.waitForTimeout(600);
+
+  // 4b. Dismiss the "START" prompt and confirm RunState actually starts, not
+  // just that the round eventually "worked" (the hole-sweep below would pass
+  // even if this transition silently failed, see the finding below). Checked
+  // by screenshot diff rather than a DOM/JS hook, since the only thing that
+  // exists to check is what actually rendered.
+  //
+  // This check exists because of a real bug, found on a real device, that an
+  // earlier, weaker version of this test did not catch: under
+  // PACK_EXTERNS=three, Closure's property renaming can rewrite some of
+  // Game.ts's `screens` record keys (e.g. `intro`->`Pc`, `win`->`Nc`) while
+  // leaving the STRING LITERALS passed to `change('intro')` elsewhere
+  // untouched. `cur` still updates (that's a plain variable assignment, nothing
+  // to rename), so `screens[cur]` then looks up a key that no longer exists,
+  // and `screens[cur]?.enter?.()` / `?.select?.()` / `?.update?.()` all
+  // silently no-op, forever, with no error, exactly like a real device that
+  // places the board and then does nothing at all, no actors, no music, no
+  // error. Confirmed non-deterministic (which specific keys break varies
+  // build to build), so this needs to be an always-on check, not a one-time
+  // fix: see the OWN_DISPATCH_KEYS comment in gen-three-externs.mjs for the
+  // full write-up and the actual fix (protecting the screen names themselves,
+  // not just Screen's method names, which turned out NOT to be the issue
+  // despite being the first, plausible-but-wrong theory).
+  const preDismiss = await page.screenshot();
+  await page.evaluate(async ({ aim }) => {
+    // @ts-expect-error
+    const d = window.__xr;
+    await d.remote.dispatch('set_transform', { device: 'controller-right', position: { x: 0, y: 0.4, z: -0.6 }, orientation: aim });
+    await d.remote.dispatch('set_select_value', { device: 'controller-right', value: 1 });
+    await new Promise((r) => setTimeout(r, 25));
+    await d.remote.dispatch('set_select_value', { device: 'controller-right', value: 0 });
+  }, { aim: AIM_DOWN });
+  await page.waitForTimeout(600);
+  const postDismiss = await page.screenshot();
+  expect(Buffer.compare(preDismiss, postDismiss), `RunState never visibly started — see the comment above and gen-three-externs.mjs's OWN_DISPATCH_KEYS. Console: ${problems.join('; ') || '(none)'}`).not.toBe(0);
+
+  // 4c. RunState.enter() calls audio.playBGM('music') as its last line, and
+  // that's the one real side effect nothing else in this test can see: no
+  // pixel changes, and headless Chromium doesn't play sound anywhere a
+  // screenshot could catch. The tap installed in step 1 is the only way to
+  // observe it. Real redline plays for tens of seconds and loops; every SFX
+  // cue's rowLen caps it well under 5s (see AudioManager.ts's SFX_ROWLEN and
+  // the per-cue rowLen overrides), so >5s + loop:true is specific to BGM,
+  // not just "any sound played".
+  const audioLog = await page.evaluate(() => (window as unknown as { __audio: { duration: number | null; loop: boolean }[] }).__audio);
+  const bgm = audioLog.find((a) => a.loop && (a.duration ?? 0) > 5);
+  expect(bgm, `BGM never started (audio log: ${JSON.stringify(audioLog)}). Console: ${problems.join('; ') || '(none)'}`).toBeTruthy();
 
   const before = await page.screenshot({ clip: RAINBOW_BAND });
 
