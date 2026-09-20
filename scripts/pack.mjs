@@ -31,6 +31,7 @@ import { spawnSync } from 'node:child_process';
 import { transformSync } from '@babel/core';
 import { minify } from 'terser';
 import { Packer } from 'roadroller';
+import { findRecordKeys } from './gen-record-keys.mjs';
 
 const FILE = 'dist/index.html';
 const LEVEL = Number(process.env.PACK_O ?? 1);
@@ -88,25 +89,34 @@ async function closureMinify(src, aliases) {
   // renames nothing. Safe, but it also blocks Closure from DROPPING unreachable
   // members, which is why dead code has to be deleted by hand.
   //
-  // PACK_EXTERNS=three: protect only three.js's API surface (generated from
-  // @types/three by scripts/gen-three-externs.mjs) plus the browser dictionary
-  // keys, and let Closure rename and dead-code-eliminate everything of ours.
-  // The gamble: renaming has historically fought roadroller's repetition model,
+  // PACK_EXTERNS=three: protect only the real external API surface (generated
+  // generically from package.json + this project's own tsconfig by
+  // scripts/gen-external-api-names.mjs, no hardcoded package names) plus our
+  // own Record<string,X> dispatch names (scripts/gen-record-keys.mjs, a
+  // distinct and much smaller risk — see .doc/DECISIONS.md D18), and let
+  // Closure rename and dead-code-eliminate everything else of ours. The
+  // gamble: renaming has historically fought roadroller's repetition model,
   // so this only wins if the DCE gain beats that loss. Measure, don't assume.
   const mode = process.env.PACK_EXTERNS ?? 'all';
   let names;
   if (mode === 'three') {
-    const f = 'build/three.externs.js';
+    const f = 'build/external-api.externs.js';
     if (!existsSync(f)) {
       // Regenerate rather than ask the caller to: it is derived entirely from
-      // node_modules, so it's a build artifact, not something to hand-maintain.
-      const gen = spawnSync(process.execPath, ['scripts/gen-three-externs.mjs'], { encoding: 'utf8', maxBuffer: 32 * 1024 * 1024 });
-      if (gen.status !== 0) throw new Error('pack: could not generate three externs:\n' + (gen.stderr || ''));
+      // node_modules + package.json, so it's a build artifact, not something
+      // to hand-maintain. Cached, unlike findRecordKeys() below, because it
+      // walks the full dependency + TypeScript-lib type surface, genuinely
+      // slow (~1s); nothing in it changes without a dependency bump, so
+      // `rm build/external-api.externs.js` is the manual refresh.
+      const gen = spawnSync(process.execPath, ['scripts/gen-external-api-names.mjs'], { encoding: 'utf8', maxBuffer: 32 * 1024 * 1024 });
+      if (gen.status !== 0) throw new Error('pack: could not generate external API externs:\n' + (gen.stderr || ''));
       mkdirSync('build', { recursive: true });
       writeFileSync(f, gen.stdout);
       console.error(`closure externs: generated ${f}`);
     }
-    names = new Set(readFileSync(f, 'utf8').matchAll(/^\$three\.([\w$]+);$/gm).map((m) => m[1]));
+    // findRecordKeys() only walks src/, fast, so it runs in-process on every
+    // call, no cache file and so no staleness class of bug for it.
+    names = new Set([...readFileSync(f, 'utf8').matchAll(/^\$ext\.([\w$]+);$/gm).map((m) => m[1]), ...findRecordKeys().flatMap((r) => r.keys)]);
   } else {
     names = collectProtectedNames(src);
   }

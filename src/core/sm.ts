@@ -22,8 +22,8 @@ export function makeSm(screens: Record<string, Screen>): Sm {
     // real "no screen yet" sentinel on the very first call, not a bug.
     // screens[name] does NOT: name is always a real, intended target, so a
     // typo'd or wrongly-renamed key throws here immediately instead of
-    // silently doing nothing (see gen-three-externs.mjs's OWN_DISPATCH_KEYS
-    // for the actual bug this class of mistake caused, twice).
+    // silently doing nothing (see scripts/gen-record-keys.mjs for the
+    // actual bug this class of mistake caused, twice).
     change(name) {
       if (name === cur) return;
       screens[cur]?.exit?.();

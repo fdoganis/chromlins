@@ -66,18 +66,22 @@ removing whole behaviours, not from shortening strings.
 By default the packer protects every property name in the code from being
 renamed, which also prevents Closure from *removing* anything unreachable. This
 mode instead protects only what is genuinely external, three.js's API and the
-WebXR/browser surface, generated automatically from `@types/three` and
-`@types/webxr`. Closure is then free to rename and drop our own dead code by
-itself, worth about 360 bytes here with no source changes.
+WebXR/browser surface, generated automatically from `package.json`'s real
+dependencies and this project's own `tsconfig.json` (`scripts/gen-external-api-
+names.mjs`, no hardcoded package list), plus a small, explicit set of our own
+dynamic-dispatch names (`scripts/gen-record-keys.mjs`). Closure is then
+free to rename and drop our own dead code by itself, worth about 360 bytes here
+with no source changes.
 
 It is opt-in because a renaming mistake fails **silently at runtime**, not at
 build time. `npm run smoke` will not catch it, it never enters an XR session.
 Always verify with `npx playwright test tests/packed.spec.ts`, which drives the
 real packed artifact through a round, and test on a device before shipping.
 
-If you add a library whose API the browser reads but bundled code does not, add
-its types to `ROOTS` in `scripts/gen-three-externs.mjs`, or its dictionary keys
-to the `BROWSER_KEYS` list there.
+Adding a real npm dependency, or a `@types/*` devDependency for a browser API
+your own code never touches (like `@types/webxr`), needs no edit here, it is
+picked up automatically. See `.doc/DECISIONS.md` D18 for the full pipeline
+write-up and its limitations.
 
 ## HTTPS
 

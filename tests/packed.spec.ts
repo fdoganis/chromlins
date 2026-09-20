@@ -168,8 +168,8 @@ test('packed artifact: an emulated controller plays a round and fills the rainbo
   // places the board and then does nothing at all, no actors, no music, no
   // error. Confirmed non-deterministic (which specific keys break varies
   // build to build), so this needs to be an always-on check, not a one-time
-  // fix: see the OWN_DISPATCH_KEYS comment in gen-three-externs.mjs for the
-  // full write-up and the actual fix (protecting the screen names themselves,
+  // fix: see scripts/gen-record-keys.mjs for the full write-up and the
+  // actual fix (protecting the screen names themselves,
   // not just Screen's method names, which turned out NOT to be the issue
   // despite being the first, plausible-but-wrong theory).
   const preDismiss = await page.screenshot();
@@ -183,7 +183,7 @@ test('packed artifact: an emulated controller plays a round and fills the rainbo
   }, { aim: AIM_DOWN });
   await page.waitForTimeout(600);
   const postDismiss = await page.screenshot();
-  expect(Buffer.compare(preDismiss, postDismiss), `RunState never visibly started — see the comment above and gen-three-externs.mjs's OWN_DISPATCH_KEYS. Console: ${problems.join('; ') || '(none)'}`).not.toBe(0);
+  expect(Buffer.compare(preDismiss, postDismiss), `RunState never visibly started — see the comment above and scripts/gen-record-keys.mjs. Console: ${problems.join('; ') || '(none)'}`).not.toBe(0);
 
   // 4c. RunState.enter() calls audio.playBGM('music') as its last line, and
   // that's the one real side effect nothing else in this test can see: no

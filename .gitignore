@@ -43,5 +43,5 @@ blob-report
 
 # calibration captures from the /__record dev sink
 tests/fixtures/
-build/three.externs.js
+build/external-api.externs.js
 .device-test
