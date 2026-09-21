@@ -43,6 +43,8 @@ packing pipeline does.
 - `npm run pack` : build, then minify through Closure, pack with roadroller and
   zip with Zopfli, into `build/chromlins.zip`. This is the artifact that ships.
   It prints the final size and fails if it is at or over the limit.
+- `npm run pack:aggressive` : same as `pack`, but lets Closure rename and drop
+  more of our own code. Riskier, a last resort, see below.
 - `npm run pack:fast` : same, but the quick settings, for iterating. A few
   hundred bytes larger, so never use it to judge whether you fit.
 - `npm run deadcode` : lists class members nothing reachable ever calls. Add
@@ -59,29 +61,51 @@ re-run `npm run pack`, that is normal practice here, not cheating.
 measured 2 bytes: roadroller compresses prose almost for free. Bytes come from
 removing whole behaviours, not from shortening strings.
 
-### `PACK_EXTERNS=three` (opt-in, ~360 bytes)
+### Last resort: `npm run pack:aggressive` (`PACK_EXTERNS=three`, ~370 bytes)
 
-    PACK_EXTERNS=three npm run pack
+    npm run pack:aggressive     # same as PACK_EXTERNS=three npm run pack
 
-By default the packer protects every property name in the code from being
-renamed, which also prevents Closure from *removing* anything unreachable. This
-mode instead protects only what is genuinely external, three.js's API and the
-WebXR/browser surface, generated automatically from `package.json`'s real
-dependencies and this project's own `tsconfig.json` (`scripts/gen-external-api-
-names.mjs`, no hardcoded package list), plus a small, explicit set of our own
-dynamic-dispatch names (`scripts/gen-record-keys.mjs`). Closure is then
-free to rename and drop our own dead code by itself, worth about 360 bytes here
-with no source changes.
+**Only reach for this when the normal `npm run pack` is over the limit.** If you
+are already under budget, do not use it: the bytes it saves are not worth the
+risk. **If you are stuck over the limit, or need extra room for a feature, this
+is the thing to try, last, after the safe options above.**
 
-It is opt-in because a renaming mistake fails **silently at runtime**, not at
-build time. `npm run smoke` will not catch it, it never enters an XR session.
-Always verify with `npx playwright test tests/packed.spec.ts`, which drives the
-real packed artifact through a round, and test on a device before shipping.
+What the two modes protect from renaming:
+
+- `npm run pack` (default, `PACK_EXTERNS=all`): every property and method name
+  that appears in our own output, about 490 names. Safe by construction, but
+  Closure can then neither rename nor remove anything reachable through a
+  property.
+- `npm run pack:aggressive` (`PACK_EXTERNS=three`): only what is genuinely
+  external, about 9,000 names: the TypeScript `lib` files `tsconfig.json`
+  enables (so the **DOM**, WebAudio and so on), every ambient `@types/*` package
+  (so **WebXR**, via `@types/webxr`), three.js's API, and any other dependency's
+  types. It is generated from `package.json` and `tsconfig.json`
+  (`scripts/gen-external-api-names.mjs`, no hardcoded package list), plus a small
+  explicit set of our own dynamic-dispatch names (`scripts/gen-record-keys.mjs`,
+  such as the cue names). Everything else of ours, Closure may rename and delete.
+
+How safe is it? The whole browser and three.js surface is protected, and
+`tests/packed.spec.ts` (run it with `PACK_MINIFY=closure PACK_EXTERNS=three npx
+playwright test tests/packed.spec.ts`) drives the real packed artifact through a
+round; an earlier version of this mode was also checked on a device. The remaining risk is a renaming
+mistake, which fails **silently at runtime**, not at build time (`npm run smoke`
+never enters an XR session, so it will not catch it). It has already happened
+once: a cue looked up by a dynamic string (`CUES[id]`) was renamed and every
+sound went silent, no error. Any new property that is read by a string built at
+runtime, or by code Closure cannot see, needs adding to `gen-record-keys.mjs`.
+Always run the packed test, and test on a device, before shipping this build.
 
 Adding a real npm dependency, or a `@types/*` devDependency for a browser API
-your own code never touches (like `@types/webxr`), needs no edit here, it is
-picked up automatically. See `.doc/DECISIONS.md` D18 for the full pipeline
-write-up and its limitations.
+your own code never touches, needs no edit here, it is picked up automatically.
+See `.doc/DECISIONS.md` D18 and D27 for the pipeline write-up.
+
+**Stale externs after touching `node_modules`.** The generated list is cached in
+`build/external-api.externs.js` and is not invalidated when dependencies,
+`node_modules` or `tsconfig.json` change. If the protected-name count Closure
+prints looks wrong, or the packed page crashes on load with something like
+`(intermediate value).gb is not a function`, delete that file (`npm run purge`
+does, along with `dist` and `node_modules`) and pack again.
 
 ## HTTPS
 

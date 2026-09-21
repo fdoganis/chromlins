@@ -12,8 +12,17 @@ const OUT = 'build/chromlins.zip';
 const LIMIT = 13312;
 const ITERATIONS = Number(process.env.ZIP_ITER ?? 15); // ZIP_ITER=1000 saves ~4-7 B, ~3s slower — use it for the release artifact
 
+// Every stage's byte count as one aligned table, same idea as pack.mjs's own
+// `stage()` — "where did the bytes go" shouldn't need re-running with extra
+// flags to see.
+const WIDTH = 33;
+const stage = (label, size, note = '') => console.log(`  ${label.padEnd(WIDTH)}  ${String(size).padStart(6)} B${note ? '  ' + note : ''}`);
+
+console.log('zip: size by stage');
 const body = readFileSync(SRC);
+stage(SRC, body.length, '(raw HTML, packed <script> included)');
 const deflated = await zopfli.deflateAsync(body, { numiterations: ITERATIONS }); // raw DEFLATE, no header
+stage(`zopfli DEFLATE (i=${ITERATIONS})`, deflated.length, `(-${(100 * (1 - deflated.length / body.length)).toFixed(1)}%)`);
 const crc = crc32(body) >>> 0;
 const name = Buffer.from(ENTRY, 'latin1');
 
@@ -39,6 +48,8 @@ const eocd = Buffer.concat([
 const zip = Buffer.concat([localHeader, deflated, centralHeader, eocd]);
 mkdirSync('build', { recursive: true });
 writeFileSync(OUT, zip);
+
+stage('+ zip container (local/central headers, EOCD)', zip.length, `(+${zip.length - deflated.length} B)`);
 
 const slack = LIMIT - zip.length;
 console.log(`${OUT}  ${zip.length} B  (${slack >= 0 ? '+' : ''}${slack} vs ${LIMIT})`);
