@@ -17,13 +17,15 @@
 // (Game's `render.anchor`, the board's own placed root) is where the
 // board-wide cues (win/over/tick) emanate from; actor-specific cues (spawn/
 // hit/unicorn) emanate from the actual actor mesh — see attach()/playAt().
-// `music` is the deliberate exception: ambient score, not a diegetic sound
-// any object in the scene is producing, so it stays non-positional, playing
-// straight through the listener like a film score rather than a stereo the
-// board owns — see playBGM.
+// `miss` (an aimed swing that hit nothing) has no persistent mesh to hang
+// off of, so it gets its own throwaway emitter at the whiff point — see
+// playAtPoint(). `music` is the deliberate exception: ambient score, not a
+// diegetic sound any object in the scene is producing, so it stays
+// non-positional, playing straight through the listener like a film score
+// rather than a stereo the board owns — see playBGM.
 // audio/AudioManager.ts
-import { AudioListener, PositionalAudio } from 'three';
-import type { Object3D, PerspectiveCamera } from 'three';
+import { AudioListener, Object3D, PositionalAudio } from 'three';
+import type { PerspectiveCamera, Vector3 } from 'three';
 import { CPlayer } from './engines/soundbox/player-small';
 import { CUES, toSong } from './cues';
 import type { SoundHandle } from './ISoundEngine';
@@ -73,15 +75,36 @@ export class AudioManager {
 
   // One-shot positional cue emitted from `source` (an actor mesh, or
   // `#origin` for a board-wide one via playSFX): attach a PositionalAudio,
-  // play, and tear the emitter down when the sound ends.
-  playAt(source: Object3D, id: string): void {
+  // play, and tear the emitter down when the sound ends. `detachSource`
+  // additionally removes `source` ITSELF when the sound ends, not just the
+  // PositionalAudio child attach() adds to it — wrong for a real, persistent
+  // actor mesh (the normal case, default false: only the transient audio
+  // node it briefly wore gets cleaned up), right for a throwaway holder that
+  // exists solely for this one sound (see playAtPoint, its only caller).
+  playAt(source: Object3D, id: string, detachSource = false): void {
     if (this.#muted) { return; }
 
     const pa = this.attach(source);
     const handle = this.#createSource(id, this.context);
-    if (!handle) { pa.removeFromParent(); return; }
+    if (!handle) { detachSource ? source.removeFromParent() : pa.removeFromParent(); return; }
     pa.setNodeSource(handle.output);
-    handle.source.onended = () => { handle.output.disconnect(); pa.removeFromParent(); };
+    handle.source.onended = () => {
+      handle.output.disconnect();
+      detachSource ? source.removeFromParent() : pa.removeFromParent();
+    };
+  }
+
+  // One-shot positional cue at a bare point with no persistent mesh to hang
+  // off of (a whiff — an aimed swing that hit nothing, so there's no actor
+  // to attach to). Makes a throwaway holder parented to `root`, positioned
+  // at `point` (in `root`'s local space), and plays through playAt with
+  // detachSource: true so the holder itself, not just its PositionalAudio
+  // child, gets torn down once the sound ends.
+  playAtPoint(root: Object3D, point: Vector3, id: string): void {
+    const holder = new Object3D();
+    holder.position.copy(point);
+    root.add(holder);
+    this.playAt(holder, id, true);
   }
 
   // How much louder than the panner's own output a short SFX cue plays, to

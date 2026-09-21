@@ -19,6 +19,11 @@ async function getCues() {
   return cuesModule;
 }
 
+// The raw { CUES, toSong } module, for tests that need to inspect a cue's
+// own tracks/notes/rowLen directly (see tests/unit/rowlen.test.mjs) rather
+// than just its rendered output.
+export const cueDefinitions = getCues;
+
 // context.createBuffer(channels, length, sampleRate) is CPlayer's entire
 // AudioContext surface (see createAudioBuffer in player-small.js) — a plain
 // Float32Array-backed stand-in is enough, no real audio hardware/API needed.

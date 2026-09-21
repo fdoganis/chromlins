@@ -19,6 +19,7 @@ const PROXIMITY_R_m = 0.08; // hand/touch fallback radius when the ray misses (a
 const DECOY_PUFF = new Color(0xd8899b); // pink "ow" burst when the unicorn is wrongly tapped
 
 export class World {
+  #root: Object3D;
   #board: Gameboard;
   #actors: Actors;
   #rainbow: Rainbow;
@@ -26,6 +27,7 @@ export class World {
   #audio: AudioManager;
 
   constructor(root: Object3D, audio: AudioManager, camera: PerspectiveCamera) {
+    this.#root = root;
     this.#audio = audio;
     this.#board = new Gameboard(root);
     this.#actors = new Actors(root, camera);
@@ -82,9 +84,12 @@ export class World {
     this.#sparkles.burst(origin, color, mode);
   }
 
-  // Colourless mini-puff where an aimed swing hit nothing.
+  // Colourless mini-puff where an aimed swing hit nothing, plus a subtle
+  // 'miss' cue from that same point — no actor mesh exists there to hang
+  // positional audio off of, so playAtPoint makes its own throwaway emitter.
   spark(origin: Vector3): void {
     this.#sparkles.spark(origin);
+    try { this.#audio.playAtPoint(this.#root, origin, 'miss'); } catch { /* audio may be unavailable */ }
   }
 
   // Aim a ray at the live actors. A normal body is removed and the collect

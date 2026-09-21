@@ -191,9 +191,8 @@ test('packed artifact: an emulated controller plays a round and fills the rainbo
   // pixel changes, and headless Chromium doesn't play sound anywhere a
   // screenshot could catch. The tap installed in step 1 is the only way to
   // observe it. Real redline plays for tens of seconds and loops; every SFX
-  // cue's rowLen caps it well under 5s (see AudioManager.ts's SFX_ROWLEN and
-  // the per-cue rowLen overrides), so >5s + loop:true is specific to BGM,
-  // not just "any sound played".
+  // cue's own rowLen (cues.ts) keeps it well under 5s,
+  // so >5s + loop:true is specific to BGM, not just "any sound played".
   const audioLog = await page.evaluate(() => (window as unknown as { __audio: { duration: number | null; loop: boolean }[] }).__audio);
   const bgm = audioLog.find((a) => a.loop && (a.duration ?? 0) > 5);
   expect(bgm, `BGM never started (audio log: ${JSON.stringify(audioLog)}). Console: ${problems.join('; ') || '(none)'}`).toBeTruthy();
