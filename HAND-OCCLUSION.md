@@ -1,11 +1,18 @@
 # Real-hand occlusion — research + prototype
 
-Spike branch. `HandOccluder` is real, tsc-clean, and unit-tested (13 tests),
-and — new this round — actually **run**, against an IWER-emulated hand, with
-screenshots and a real numeric measurement against three.js's own
-ground-truth hand model. It is wired into `Game.ts` right now **only to get an
-honest byte measurement and to make it testable**; that wiring is marked
-`BYTE-COST MEASUREMENT ONLY` in the source and is not a decision to ship.
+Spike branch. `HandOccluder` is real, tsc-clean, unit-tested (31 tests), and
+run against an IWER-emulated hand with screenshots and a real numeric
+measurement against three.js's own ground-truth hand model. It is wired into
+`Game.ts` right now **only to get an honest byte measurement and to make it
+testable**; that wiring is marked `BYTE-COST MEASUREMENT ONLY` in the source
+and is not a decision to ship.
+
+**This doc went through one full round of ablation** (four isolated
+one-change experiments, each measured for real packed size and re-run through
+the same comparison test) after the first version shipped a lathe-profile
+phalanx, a box palm plate, and a guessed forearm. All three of those
+decisions turned out to be measurably wrong; see "Byte cost" and "Is the palm
+handled?" below for what replaced them and by how much.
 
 ## The problem
 
@@ -39,76 +46,66 @@ directly), and `renderer.xr.getHand(n).joints[name]` is already how
 `HandSource.ts` reads hand joints. No new session features, no new per-frame
 API calls.
 
-**Shape: a lathed "phalanx", not a uniform capsule.** A real finger segment
-tapers from knuckle to tip. The technique — you sent the actual pen mid-session,
-which settled this precisely rather than from a paraphrase — is
-[prisoner849's](https://discourse.threejs.org/u/prisoner849) three.js forum
-CodePen `qBaNKNM` (CC BY-SA): `createPhalanxGeom(R, L)` builds a 2D profile —
-`r = R*0.85`, `a = Math.asin((R-r)/L)`, then an arc of radius `R` from
-`Math.PI*1.5` to `a` (the base cap) joined to an arc of radius `r` from `a` to
-`Math.PI*0.5` (the tip cap) — and revolves it with `LatheGeometry` into one
-tapered, rounded-cap solid. The pen chains these through a real `Object3D`
-hierarchy with a hand-authored TWEEN bend for an animated demo hand — that
-part doesn't apply here, since we have a **real** tracked skeleton, so each
-bone's transform comes from two real joint poses instead
-(`handBones.ts`'s `boneMatrix`).
-
-Independent confirmation this is the right general shape: a
-[MuJoCo/WebXR hand-rendering PR](https://github.com/ttktjmt/mjswan/pull/114)
-does the same thing — capsules between adjacent WebXR joints, sized by joint
-radius, no hand mesh.
+**Shape: capsule, not the tapered lathe profile prior art suggested — measured,
+not assumed.** A real finger segment tapers from knuckle to tip, which is why
+the first version of this spike used a tapered lathe profile instead of a
+uniform capsule. You sent the actual technique mid-session — Prisoner849's
+three.js forum CodePen `qBaNKNM` (CC BY-SA): `createPhalanxGeom(R, L)` builds
+a 2D profile (`r = R*0.85`, two arcs joined at `a = Math.asin((R-r)/L)`) and
+revolves it with `LatheGeometry` into one tapered, rounded-cap solid, then
+chains these through a real `Object3D` hierarchy with a hand-authored TWEEN
+bend for an animated demo hand. A separate line of prior art — a
+[MuJoCo/WebXR hand-rendering PR](https://github.com/ttktjmt/mjswan/pull/114) —
+instead uses plain capsules between adjacent WebXR joints, sized by joint
+radius, no taper. Both are real, used techniques, so which one to use here
+was an empirical question, not a style choice — see "Byte cost" below: the
+plain capsule won on both size and measured accuracy, so that's what shipped.
+Either way, no hand-authored bend animation applies here: we have a **real**
+tracked skeleton, so each bone's transform comes from two real joint poses
+(`handBones.ts`'s `boneMatrix`), not an authored bend.
 
 ## Is the palm handled? Wrist? Forearm?
 
-**Palm: yes, and it needed a real fix.** The first version of this spike
-covered the palm with five thin "spoke" bones fanning from the wrist to each
-finger's own metacarpal joint — lines, with real gaps between them, not an
-area. It's replaced with `palmPlateMatrix(wrist, indexMc, pinkyMc)`: a single
-flat box spanning the wrist and the two outer metacarpals (index and pinky,
-the width of the knuckle line), the same three-point approximation the
-mjswan PR above uses for its own two-capsule palm. One instance instead of
-five, and it actually covers the area, not three lines through it.
+**Palm: yes — and its shape went through two revisions.** The very first
+version covered the palm with five thin "spoke" bones fanning from the wrist
+to each finger's own metacarpal — lines, with real gaps between them, not an
+area. That became a single flat box plate spanning the wrist and the two
+outer metacarpals (index and pinky, the knuckle-line width), the same
+three-point approximation the mjswan PR uses for its own palm. **Measured
+against that box (see "Byte cost" below), a third option won**: two more
+`boneMatrix` calls — wrist→index-metacarpal and wrist→pinky-metacarpal, the
+mjswan PR's own actual two-capsule palm, not the box — reusing the exact same
+pool, geometry and function the fingers already use. Same coverage, no
+separate `BoxGeometry`, no separate `InstancedPool`, no bespoke basis-matrix
+function (`palmPlateMatrix` is gone). This is what shipped.
 
 **Wrist: covered as an endpoint, not as its own volume.** Every finger bone
-starts at a metacarpal (not the wrist directly, since the wrist→metacarpal
-segment is now the palm plate's job), and the palm plate's own base edge sits
-at the wrist joint, using its real `jointRadius`. There's no separate capsule
-wrapping the wrist's own girth as a bone in its own right; the plate's edge
-approximates it. Worth a closer look on a device, not fixed further here.
+starts at a metacarpal, and both palm spokes start at the wrist, using its
+real `jointRadius`. There's no capsule wrapping the wrist's own girth as a
+bone in its own right. Worth a closer look on a device, not fixed further
+here.
 
-**Forearm: WebXR has no data for it at all.** The Hand Input skeleton stops at
-the wrist ([explainer](https://github.com/immersive-web/webxr-hand-input/blob/main/explainer.md)
-confirms no forearm joint exists). `forearmMatrix` estimates one anyway: the
+**Forearm: dropped — WebXR has no data for it at all, and it measurably hurt
+more than it helped.** The Hand Input skeleton stops at the wrist
+([explainer](https://github.com/immersive-web/webxr-hand-input/blob/main/explainer.md)
+confirms no forearm joint exists). A first attempt estimated one anyway: the
 spec fixes each joint's local **-Z as "along the bone, away from the wrist"**
 for every joint except the wrist itself, where that convention makes the
-wrist's own **+Z point back toward the forearm** — so `forearmMatrix` extends
-a bone from the wrist along that direction by `FOREARM_LENGTH_m = 0.25`
-(an average-adult guess, not tracked data).
-
-**This measurably needs work — the real test run below caught it.** The
-occluder-only screenshot
-(`test-results/hand-occlusion/occluder-only.png`) shows a long, disproportionate
-cyan spike trailing off the wrist, clearly too long for the frame, and a small
-stray mark at the screen edge that's very likely the same segment
-foreshortened oddly by perspective at close camera range — not separately
-root-caused. Two honest things to say about this:
-
-1. The direction is spec-derived and probably right; the length (0.25m) is a
-   guess with no tracked data behind it, and it visibly reads as too long in
-   this test's fairly close camera framing.
-2. **The IoU metric below structurally cannot validate the forearm at all** —
-   the ground-truth glTF hand model has no forearm, so every forearm pixel the
-   occluder draws counts as a false positive against the metric regardless of
-   how accurate it actually is. The 0.749 IoU number is therefore a
-   pessimistic, hand-only-unfair number that also penalizes a correct
-   forearm; a fair forearm-accuracy check would need a different reference
-   (arm-inclusive) model, not attempted here.
-
-**Recommendation:** treat the forearm as the least-settled part of this spike.
-Before shipping it, either shrink `FOREARM_LENGTH_m` substantially (a short
-"stub" just past the wrist, not a full forearm) or make it possible to disable
-independently, and re-check on a real device rather than tuning purely against
-this screenshot.
+wrist's own **+Z point back toward the forearm** — so it extended a bone from
+the wrist along that direction by a guessed 0.25 m (average adult forearm,
+not tracked data). The comparison test caught the problem immediately: the
+occluder-only screenshot showed a long, disproportionate spike trailing off
+the wrist, and dropping the segment alone took IoU from 0.749 to 0.982 (see
+"Byte cost" below) — the single largest swing of any change tried. Two honest
+reasons that number is even worse than the shape alone deserves: the
+0.25 m *length* is a pure guess with no tracked data behind it, and **the IoU
+metric structurally cannot validate a forearm at all** — the ground-truth
+glTF hand model has no forearm, so every forearm pixel the occluder draws
+counts as a false positive regardless of how accurate it actually is. Given
+that, and that it cost real bytes on top, it's simply not built anymore. If
+you want it back later, the direction math above is still correct; start
+with a much shorter guessed length, and accept that this metric can't tell
+you if you got it right.
 
 ## Debug joint markers, and the XRHandModelFactory question
 
@@ -139,22 +136,46 @@ it.** These are two different problems:
 This is also exactly the tool used below as the "ground truth" reference —
 the `.glb` model three's own XR-hands examples use.
 
-## Byte cost — measured, not estimated
+## Byte cost — measured, not estimated, and ablated
 
-Wired unconditionally into `Game.ts` (fingers + forearm + palm, no debug),
-fresh builds, `PACK_O=1`, before/after on the same commit baseline:
+Wired unconditionally into `Game.ts` (no debug), fresh builds, `PACK_O=1`.
+`main` alone (no `HandOccluder` at all): **13,232 B default / 12,887 B
+aggressive.** Starting from the first working version (lathe phalanx + box
+palm + guessed forearm) and changing exactly one thing at a time, re-running
+`tests/hand-occlusion.spec.ts` after each change for its IoU against three's
+ground-truth hand mesh:
 
-| Mode | Baseline (`main`) | With `HandOccluder` | Delta |
+| Variant | default zip | aggressive zip | IoU |
 |---|---|---|---|
-| default (`npm run pack`) | 13,232 B | 14,028 B | **+796 B** |
-| aggressive (`npm run pack:aggressive`) | 12,887 B | 13,630 B | **+743 B** |
+| Baseline: lathe + box palm + forearm | 14,038 B | 13,611 B | 0.749 |
+| A: capsule instead of lathe | 13,987 B | 13,563 B | 0.872 |
+| B: baseline, forearm dropped | 13,977 B | 13,564 B | 0.982 |
+| C: B + spoke palm instead of box | 13,889 B | 13,429 B | 0.980 |
+| D: A + B + C, all combined | 13,808 B | 13,390 B | 0.985 |
+| **Shipped** (D + one more dedup, below) | **13,787 B** | **13,376 B** | 0.985 |
 
-Both push the build over the 13,312 B limit as things stand (`main` alone is
-already close to the ceiling). This is a real, substantial cost — noticeably
-more than the ~370 B `pack:aggressive` itself saves. The debug-mode
-extra (joint spheres + `handOcclusionDebug.ts`) is **not** included in this
-number: it's gated behind `__DEV__ && 'handdebug' in query`, so it tree-shakes
-to nothing in a production build regardless of whether this feature ships.
+Every single change was a real, independent improvement — smaller **and**
+better-fitting, never a trade-off between the two. The forearm alone
+accounts for most of the swing (compare baseline to B). Adopting D then
+turned up one more real duplicate while cleaning up: `HandOccluder`'s debug
+markers and `Sparkles.ts` both already had their own identical "identity
+quaternion, for something that never rotates" constant; moved to the shared
+`text/engines/voxel/constants.ts` (which already held `UP` and
+`ZERO_SCALE_MATRIX` for the same reason) so `Sparkles.ts` drops its own
+`Quaternion` import entirely. `handBones.ts`'s own local `UP` constant stays
+a duplicate on purpose — it's the one file in this feature that has to stay
+plain-Node testable with zero extensionless imports, which is exactly what
+broke (loudly, in the unit test suite) the one time this session tried
+importing the shared one into it.
+
+**Where this leaves the budget:** shipped, this is still **64 B over** the
+13,312 B limit in aggressive mode (13,376 B), and 475 B over in default mode.
+That 64 B is the real number to answer "how many bytes do we need to find" —
+down from 318 B for the original, un-ablated design, but not yet closed. The
+debug-mode extra (joint spheres + `handOcclusionDebug.ts`) is **not** included
+in any of these numbers: it's gated behind `__DEV__ && 'handdebug' in query`,
+so it tree-shakes to nothing in a production build regardless of whether this
+feature ships.
 
 ## Automated testing — built and run
 
@@ -182,17 +203,16 @@ three's ground-truth hand mesh:
 5. `window.__handDebug.showOnly('mesh' | 'occluder' | 'both')` drives three
    on-canvas screenshots for visual inspection.
 
-**Real result, this run** (`test-results/hand-occlusion/`):
+**Real result, shipped configuration** (`test-results/hand-occlusion/`):
 
 ```json
-{ "occluderPixels": 23583, "meshPixels": 17740, "overlapPixels": 17699, "iou": 0.749 }
+{ "occluderPixels": 18057, "meshPixels": 17812, "overlapPixels": 17800, "iou": 0.985 }
 ```
 
-17,699 of the mesh's 17,740 silhouette pixels (99.8%) are covered by the
-occluder — the hand/finger/palm shape genuinely lines up well. The IoU is
-dragged down to 0.749 almost entirely by the forearm over-count discussed
-above (`occluderPixels` exceeds `meshPixels` by ~5,800, more than the whole
-gap between overlap and union). `mesh-only.png`, `occluder-only.png` and
+17,800 of the mesh's 17,812 silhouette pixels (99.9%) are covered, and
+`occluderPixels` is now within 1.4% of `meshPixels` (was 33% larger with the
+lathe+box+forearm baseline) — the shape doesn't just cover the real hand, it
+barely over-covers it anymore. `mesh-only.png`, `occluder-only.png` and
 `both-visible.png` are saved for direct visual comparison; `overlap.json`
 holds the raw numbers.
 
@@ -210,21 +230,34 @@ question above settled first, or it will just be gamed by that one segment.
 - **`renderOrder` / blend-order against the rest of the scene** — reasoned
   about (ordinary depth testing should just work, unlike `Hole.ts`'s
   early-`renderOrder` trick), not measured on device.
-- **The forearm question above.**
-- **The stray edge-of-frame mark** in `occluder-only.png` — plausibly the same
-  oversized forearm segment foreshortened by perspective at this test's fairly
-  close camera distance, not independently confirmed.
+- **No pass/fail threshold set** on the IoU — the spec only asserts both masks
+  are non-empty, so a future regression that silently breaks joint tracking
+  still fails loudly, but a smaller, real drop in quality would not. 0.985 on
+  this one pose is a reasonable candidate floor once checked against a couple
+  more poses.
+- **64 B still over budget** in aggressive mode (13,376 B) — see "Byte cost."
+
+## Where else could those 64 B come from?
+
+Not chased further in this spike (out of scope for a hand-occlusion doc), but
+worth naming since they're the obvious next places to look, roughly in order
+of expected size: `pack:aggressive` itself already trims ~370 B by letting
+Closure rename/delete our own dead code — if this ships, re-running
+`npm run deadcode` (README documents it; **it doesn't currently exist as an
+npm script**, a pre-existing doc/reality mismatch worth fixing separately)
+would be the natural next lever, followed by the same kind of one-change
+ablation done here applied to the rest of the audio/state code, not just this
+feature.
 
 ## Recommendation
 
-Still worth pursuing — the finger/palm geometry measurably lines up with a
-real reference model (99.8% of its silhouette covered), the technique needs no
-WebXR features Quest doesn't already grant this game, and it now has a
-repeatable, automated regression test with real screenshots. Before shipping:
-settle the forearm (shrink it, gate it separately, or drop it), verify on a
-real device that occlusion actually looks right against real passthrough (not
-just against a reference mesh), and decide whether the ~750-800 B cost is
-worth it against the other two byte-budget options (light estimation, the
-bitmap font) — this spike's own testing shows this is the one with a
-verified, working effect on the *thing this game is actually about* (a
-whack-a-mole hand), which the other two don't touch.
+Ship this shape if the feature ships at all: the ablation above is
+unambiguous (every change was smaller **and** measurably more accurate, never
+a trade-off), it needs no WebXR features Quest doesn't already grant this
+game, and it now has a repeatable, automated regression test with real
+screenshots. Before shipping: close the remaining 64 B (aggressive mode),
+verify on a real device that occlusion actually looks right against real
+passthrough (not just against a reference mesh), and weigh it against the
+other two byte-budget options (light estimation, the bitmap font) — this is
+the one with a verified, working effect on the *thing this game is actually
+about* (a whack-a-mole hand), which the other two don't touch.
