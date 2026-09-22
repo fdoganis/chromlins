@@ -2,11 +2,11 @@ import { Vector3 } from 'three';
 import type { XRHandSpace } from 'three';
 import type { Object3D } from 'three';
 import type { XRHandedness } from '../types/XRTypes';
-import { SpatialInputSource } from './SpatialInputSource';
+import { InputSource } from './InputSource';
 import { SelectCommand } from '../commands/SelectCommand';
 
-// Wraps renderer.xr.getHand(n). Keeps the event bindings of a SpatialInputSource
-// (the app still binds `pinchend`), and adds a poll-based "whack" detector: a
+// Wraps renderer.xr.getHand(n) with a poll-based "whack" detector (a pinch is
+// not handled here: it arrives as a session select, see XRSelectSource). A
 // table tap is the palm being driven down fast while it's close to the placed
 // surface. We watch the palm centre joint for a downward strike inside that
 // band. We deliberately do NOT wait for a near-stop — real hand tracking jitters
@@ -23,7 +23,7 @@ const WHACK_REACH_m = 0.18;  // an open palm catches a wider area than a control
 const _palm = new Vector3();
 const _surface = new Vector3();
 
-export class HandSource extends SpatialInputSource {
+export class HandSource extends InputSource {
   #hand: XRHandSpace;
   #handedness: XRHandedness;
   #board: Object3D;
@@ -34,7 +34,7 @@ export class HandSource extends SpatialInputSource {
   #coolUntil = 0;
 
   constructor(hand: XRHandSpace, handedness: XRHandedness, board: Object3D) {
-    super(hand);
+    super();
     this.#hand = hand;
     this.#handedness = handedness;
     this.#board = board;
@@ -59,7 +59,7 @@ export class HandSource extends SpatialInputSource {
           downSpeed >= SPEED_MIN_mps &&
           relY >= BAND_LOW_m && relY <= BAND_HIGH_m
         ) {
-          this.queue.push(new SelectCommand(joint, this.#handedness, WHACK_REACH_m));
+          this.queue.push(new SelectCommand(joint, this.#handedness, WHACK_REACH_m, _palm.y));
           this.#coolUntil = now + COOLDOWN_ms;
         }
       }

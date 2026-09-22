@@ -12,6 +12,7 @@ import {
   SRGBColorSpace,
   NotEqualStencilFunc
 } from 'three';
+import { getQuery } from '../core/Utils';
 // Inline replacement for three/addons' XRButton.createButton(): unlike bare
 // 'three' that helper isn't externalized to a CDN in this build, so its
 // insecure-context fallback link, offerSession quick-start prompt and
@@ -31,7 +32,12 @@ function xrButton(renderer: WebGLRenderer, sessionInit: XRSessionInit): HTMLElem
   (async () => {
     let mode: XRSessionMode | undefined;
     try {
-      if (await navigator.xr?.isSessionSupported('immersive-ar')) mode = 'immersive-ar';
+      // Dev: `?xr=ar` / `?xr=vr` force the session mode instead of detecting
+      // AR-then-VR (back from 674a2cc, dropped in the 1fb486a crunch), e.g. a
+      // Quest on Vision Pro's immersive-vr, no-hit-test "REST ON TABLE" path.
+      const forced = __DEV__ ? ({ ar: 'immersive-ar', vr: 'immersive-vr' } as const)[getQuery().xr as 'ar' | 'vr'] : undefined;
+      if (forced) mode = forced;
+      else if (await navigator.xr?.isSessionSupported('immersive-ar')) mode = 'immersive-ar';
       else if (await navigator.xr?.isSessionSupported('immersive-vr')) mode = 'immersive-vr';
     } catch { /* rejected support check: treated as unsupported below */ }
     if (!mode) { btn.textContent = 'XR NOT SUPPORTED'; return; }

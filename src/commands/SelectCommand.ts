@@ -8,15 +8,17 @@ const _d = new Vector3();
 const _ray = new Ray();
 
 export class SelectCommand extends Command {
-  readonly transform: ITransform;
+  readonly transform: ITransform;    // aim: a ray from its world position along its local −Z
   readonly handedness: XRHandedness; // 'none' for sources with no physical hand
   readonly reach: number;            // hit radius in metres; 0 = source has no opinion, use the default
+  readonly rest: number;             // world Y of the hand/controller resting on the table (AnchorState, no hit-test)
 
-  constructor(transform: ITransform, handedness: XRHandedness = 'none', reach = 0) {
+  constructor(transform: ITransform, handedness: XRHandedness, reach: number, rest: number) {
     super();
     this.transform = transform;
     this.handedness = handedness;
     this.reach = reach;
+    this.rest = rest;
   }
 
   // The aimed ray: the source's world position, pointing along its local -Z.

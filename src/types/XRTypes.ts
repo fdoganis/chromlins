@@ -6,12 +6,6 @@ import type { Vector3 } from 'three';
 
 export type XRHandedness = 'none' | 'left' | 'right';
 
-export type XRBindableEvent =
-  | 'select' | 'selectstart' | 'selectend'
-  | 'squeeze' | 'squeezestart' | 'squeezeend'
-  | 'pinchstart' | 'pinchend'; // hand tracking's own gesture events, distinct from select
-
-
 // Extra event names dispatched by WebXRManager at runtime
 declare module 'three' {
   interface Object3DEventMap {

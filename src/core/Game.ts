@@ -55,8 +55,6 @@ export class Game {
 
     this.#sm = this.#buildStates();
 
-    this.#bindInput();
-
     // The "START XR" button press is the one gesture every browser accepts as
     // audio-unlocking, see AudioManager.unlock().
     this.rendering.xrButton.addEventListener('click', () => this.audio.unlock());
@@ -64,6 +62,7 @@ export class Game {
 
   // Dev: `?run` skips Intro/Placing and drops the board in front of the default
   // camera, so the running state is testable on plain desktop without WebXR.
+  // (`?xr=ar` / `?xr=vr`, forcing the session mode, live in RenderingManager.)
   #buildStates(): Sm {
     const level = this.level;
 
@@ -105,15 +104,6 @@ export class Game {
     // a unicorn peeking at hole 0, held — after RunState.enter()'s world.reset()
     if (debugUni) queueMicrotask(() => this.world.spawnAtHole(0, '#f3ead7', Infinity, -1, true));
     return sm;
-  }
-
-  #bindInput(): void {
-    const { xrLeft, xrRight, handLeft, handRight } = this.#input;
-
-    xrLeft.bind('select', new SelectCommand(xrLeft.node, 'left'));
-    xrRight.bind('select', new SelectCommand(xrRight.node, 'right'));
-    handLeft.bind('pinchend', new SelectCommand(handLeft.node, 'left'));
-    handRight.bind('pinchend', new SelectCommand(handRight.node, 'right'));
   }
 
   processInput() {

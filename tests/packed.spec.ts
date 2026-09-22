@@ -16,8 +16,9 @@ import { renderCue } from './lib/render-cue.mjs';
 // Prod build ⇒ __DEV__ is false ⇒ no `?run` route: the board is placed the real
 // way. IWER has no @iwer/sem, so the app's `requestHitTestSource` rejects —
 // AnchorState's "no usable hit-test" path — and then, like any real select on
-// that path, a controller select at y=0.02 drops the board at (0,0,-0.6) — the
-// same pose `?run` uses, so xr.spec's hole/rainbow constants apply verbatim.
+// that path, a controller select aimed at y=0.02 drops the board at (0,~0,-0.6)
+// — the `?run` pose give or take a few cm of height, so xr.spec's hole/rainbow
+// constants still apply.
 //
 // The packed page fetches three from the jsdelivr importmap URL at runtime; this
 // spec needs outbound network (CI has it). Set PACKED_PREBUILT=1 to skip the
@@ -122,9 +123,11 @@ test('packed artifact: an emulated controller plays a round and fills the rainbo
   await page.waitForTimeout(1500);
 
   // 3. head high + a controller connected so AnchorState reaches its no-hit-test
-  //    path, then a select at y=0.02 places the board at (0,0,-0.6) — #onSelect
-  //    subtracts 0.02, so this lands the anchor at exactly y=0, axis-aligned
-  //    (x=0 and a hole behind the head ⇒ zero yaw from #faceCamera).
+  //    path, then a select aimed at y=0.02 places the board at (0,~0,-0.6),
+  //    axis-aligned (x=0 and a hole behind the head ⇒ zero yaw from
+  //    faceCamera). Height comes from the lowest tracked grip minus 0.02; with
+  //    the controller pointing down its grip rides ~5 cm over the aim point, so
+  //    the anchor lands ~5 cm up — irrelevant to the straight-down sweep.
   await page.evaluate(async () => {
     // @ts-expect-error
     const d = window.__xr;
@@ -141,7 +144,7 @@ test('packed artifact: an emulated controller plays a round and fills the rainbo
     await new Promise((r) => setTimeout(r, 25));
     await d.remote.dispatch('set_select_value', { device: 'controller-right', value: 0 });
   }, { aim: AIM_DOWN });
-  await page.waitForTimeout(600); // #placeOnFloor → Intro
+  await page.waitForTimeout(600); // placeOnFloor → Intro (its own "START" prompt eats the loop's first select below)
 
   // 4. drop to the standard viewing pose (board already placed; anchor won't move)
   await page.evaluate(async () => {

@@ -77,10 +77,12 @@ export function makeAnchor(ctx: Game): Screen {
         // front). Ignore the pose orientation and face the player instead.
         reticle.matrix.decompose(render.anchor.position, render.anchor.quaternion, render.anchor.scale);
       } else if (noHitTest) {
-        // No hit-test source (VR, or an AR device that granted none): whatever
-        // fired this select — hand pinch or controller trigger, no distinction
-        // needed — is resting near the real table. Use its height, not a guess.
-        placeOnFloor(_v.setFromMatrixPosition(cmd.transform.matrixWorld).y - 0.02);
+        // No hit-test source (VR, or an AR device that granted none): a hand or
+        // controller rests on the real table, either the one selecting or the
+        // other one, and cmd.rest is the lowest tracked input's height
+        // (XRSelectSource). A real measured height, not a guess; a palm or grip
+        // origin sits ~2 cm above the surface.
+        placeOnFloor(cmd.rest - 0.02);
         return;
       } else {
         return; // no pose yet, and hit-test might still show up
