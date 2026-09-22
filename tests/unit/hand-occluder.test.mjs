@@ -1,15 +1,17 @@
-// Plain Node unit test for handBones.ts's pure geometry (boneMatrix, the
-// finger/forearm segments, and palmPlateMatrix, the palm) — no WebXR session,
-// no renderer, no browser needed: three's math/geometry classes run fine
-// under plain Node. tests/hand-occlusion.spec.ts is the end-to-end companion:
-// a real (IWER-emulated) hand, screenshots, and a numeric overlap measurement
-// against three's own ground-truth hand model.
+// Plain Node unit test for handBones.ts's pure geometry (boneMatrix, and the
+// BONES finger-segment list) — no WebXR session, no renderer, no browser
+// needed: three's math/geometry classes run fine under plain Node.
+// tests/hand-occlusion.spec.ts is the end-to-end companion: a real
+// (IWER-emulated) hand, screenshots, and a numeric overlap measurement
+// against three's own ground-truth hand model — including the ablation that
+// dropped this file's earlier forearmMatrix/palmPlateMatrix functions (a
+// separate box palm and a guessed forearm segment), see HAND-OCCLUSION.md.
 //
 //   node --experimental-strip-types --test tests/unit/hand-occluder.test.mjs
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { Vector3, Matrix4, Quaternion } from 'three';
-import { boneMatrix, forearmMatrix, palmPlateMatrix, BONES, PALM_JOINTS, FOREARM_LENGTH_m } from '../../src/world/handBones.ts';
+import { boneMatrix, BONES } from '../../src/world/handBones.ts';
 
 const EPS = 1e-6;
 
@@ -64,40 +66,5 @@ test('BONES keeps every finger down to its -tip joint (no accidental truncation)
   const thumbBones = fingerBones('thumb');
   assert.strictEqual(thumbBones.length, 3, `thumb should have 3 bones (metacarpal->proximal->distal->tip), got ${thumbBones.length}`);
   assert.ok(thumbBones.some(([, b]) => b === 'thumb-tip'), 'thumb is missing its tip bone entirely');
-  assert.ok(!BONES.some(([a, b]) => a === 'wrist' || b === 'wrist'), 'wrist should not appear in BONES — it is the palm plate\'s job (PALM_JOINTS)');
-});
-
-test('palmPlateMatrix centers on the wrist/index-metacarpal/pinky-metacarpal centroid and spans their real distances', () => {
-  const wrist = new Vector3(0, 0, 0);
-  const indexMc = new Vector3(-0.04, 0, 0.08); // knuckle line 0.08m wide (2*0.04)
-  const pinkyMc = new Vector3(0.04, 0, 0.08);
-  const m = palmPlateMatrix(wrist, indexMc, pinkyMc);
-  assert.ok(m, 'expected a real plate matrix for three non-degenerate points');
-  const pos = new Vector3(), scale = new Vector3();
-  m.decompose(pos, new Quaternion(), scale);
-  const centroid = wrist.clone().add(indexMc).add(pinkyMc).divideScalar(3);
-  assert.ok(pos.distanceTo(centroid) < EPS, `expected centroid ${centroid.toArray()}, got ${pos.toArray()}`);
-  assert.ok(Math.abs(scale.x - 0.08) < EPS, `expected width scale 0.08 (index-to-pinky distance), got ${scale.x}`);
-  assert.ok(Math.abs(scale.z - 0.08) < EPS, `expected depth scale 0.08 (wrist-to-knuckle-midpoint distance), got ${scale.z}`);
-});
-
-test('palmPlateMatrix returns null for a degenerate (zero-width or zero-depth) hand', () => {
-  const p = new Vector3(0, 0, 0);
-  assert.strictEqual(palmPlateMatrix(p, p.clone(), p.clone()), null);
-});
-
-test('forearmMatrix extends from the wrist along its own +Z by FOREARM_LENGTH_m', () => {
-  const wrist = new Vector3(1, 2, 3);
-  const identity = new Quaternion(); // +Z stays +Z under identity rotation
-  const m = forearmMatrix(wrist, identity, 0.02);
-  assert.ok(m, 'expected a real forearm matrix');
-  const pos = new Vector3(), scale = new Vector3();
-  m.decompose(pos, new Quaternion(), scale);
-  const expectedMid = wrist.clone().add(new Vector3(0, 0, FOREARM_LENGTH_m / 2));
-  assert.ok(pos.distanceTo(expectedMid) < EPS, `expected midpoint ${expectedMid.toArray()}, got ${pos.toArray()}`);
-  assert.ok(Math.abs(scale.y - FOREARM_LENGTH_m) < EPS, `expected length scale ${FOREARM_LENGTH_m}, got ${scale.y}`);
-});
-
-test('PALM_JOINTS names the three real joints the palm plate is built from', () => {
-  assert.deepStrictEqual(PALM_JOINTS, ['wrist', 'index-finger-metacarpal', 'pinky-finger-metacarpal']);
+  assert.ok(!BONES.some(([a, b]) => a === 'wrist' || b === 'wrist'), 'wrist should not appear in BONES — HandOccluder builds the two palm spokes itself, straight from boneMatrix');
 });

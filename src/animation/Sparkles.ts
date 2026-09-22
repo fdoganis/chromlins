@@ -1,6 +1,7 @@
-import { BoxGeometry, MeshBasicMaterial, Vector3, MathUtils, Matrix4, Quaternion, Color } from 'three';
+import { BoxGeometry, MeshBasicMaterial, Vector3, MathUtils, Matrix4, Color } from 'three';
 import type { Object3D } from 'three';
 import { InstancedPool } from '../rendering/InstancedPool';
+import { IDENTITY_QUAT } from '../text/engines/voxel/constants';
 import { easeOutQuint } from './Easing';
 import type { Ease } from './Easing';
 
@@ -16,7 +17,6 @@ type Particle = {
 };
 
 const SPREAD_m = 0.3; // meters a particle travels from / to the burst origin
-const IDENTITY_QUAT = new Quaternion(); // particles never rotate // TODO: QUESTION: why not?
 const WHITE = new Color(0xffffff);
 
 export type BurstMode = 'explode' | 'converge'; // TODO: replace with a better enum?
