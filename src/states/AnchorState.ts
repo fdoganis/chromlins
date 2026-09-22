@@ -56,13 +56,13 @@ export function makeAnchor(ctx: Game): Screen {
   const advance = () => { done = true; ctx.change('intro'); }; // the opening cinematic, then RunState
 
   // No usable hit-test: put the board ahead, facing forward, and let the player
-  // reach/aim at it. `y`, when given, is a real measured height (see select());
-  // otherwise guess the floor — local-floor space → camera.y ≈ standing height
+  // reach/aim at it. `y` is a real measured height (see select()); when the
+  // select carried no pose at all (Infinity), guess the floor — local-floor space → camera.y ≈ standing height
   // so the floor is y=0, a headset-origin space → camera.y ≈ 0 so it's ~1.6 m
   // below (per the WebXR default eye height).
-  const placeOnFloor = (y?: number) => {
+  const placeOnFloor = (y: number) => {
     const camY = render.camera.position.y;
-    render.anchor.position.set(0, y ?? (camY > 0.8 ? 0 : camY - 1.6), -FLOOR_DIST_m);
+    render.anchor.position.set(0, isFinite(y) ? y : (camY > 0.8 ? 0 : camY - 1.6), -FLOOR_DIST_m);
     faceCamera();
     advance();
   };

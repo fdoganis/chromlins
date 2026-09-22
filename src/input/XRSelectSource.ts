@@ -22,8 +22,11 @@ export class XRSelectSource extends InputSource {
       const session = xr.getSession()!;
       session.addEventListener('select', ({ frame, inputSource: src }) => {
         const ref = xr.getReferenceSpace()!;
+        // Never drop a select for want of a pose (three.js's controller groups
+        // didn't either): a reticle placement or a START tap needs no aim. An
+        // unposed select aims nowhere and has no height (rest = Infinity).
         const ray = frame.getPose(src.targetRaySpace, ref);
-        if (!ray || !this.enabled) return;
+        if (!this.enabled) return;
         // Grip where there is one: a transient pointer's target ray starts
         // between the eyes, its grip sits at the pinching fingers.
         const y = (s: XRInputSource) => frame.getPose(s.gripSpace ?? s.targetRaySpace, ref)?.transform.position.y;
@@ -34,10 +37,10 @@ export class XRSelectSource extends InputSource {
         // Vision Pro without hand tracking) → wherever this select happened.
         // Lowest rather than "the other hand": an idle hand or controller is
         // usually held above the table, rarely below it.
-        let rest = y(src) ?? ray.transform.position.y;
+        let rest = y(src) ?? ray?.transform.position.y ?? Infinity;
         for (const s of session.inputSources) rest = Math.min(rest, y(s) ?? rest);
         this.queue.push(new SelectCommand(
-          { matrixWorld: new Matrix4().fromArray(ray.transform.matrix) },
+          { matrixWorld: ray ? new Matrix4().fromArray(ray.transform.matrix) : new Matrix4() },
           src.handedness,
           0,
           rest,
