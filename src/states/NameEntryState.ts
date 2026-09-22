@@ -8,8 +8,10 @@
 // HiScore.submit, -> Intro (or straight into level 13 if you signed "13K").
 //
 // Reuses the gameplay loop: World's Actors for the rising bodies, the same
-// ray/proximity hit query, the same Sparkles burst.
-import { Object3D, Ray, Vector3 } from 'three';
+// ray/proximity hit query, the same Sparkles burst, and the run's own feedback
+// on every whack (World.touch plays the standard 'hit' cue, a whiff gets the
+// same puff + 'miss' cue via World.whiff, and the controller gets its pulse).
+import { Object3D } from 'three';
 import type { Game } from '../core/Game';
 import type { Screen } from '../core/sm';
 import type { SelectCommand } from '../commands/SelectCommand';
@@ -27,91 +29,56 @@ const OK_HEX = RAINBOW[6];                // violet
 const L13_NAME = '13K';                   // sign this to unlock level 13
 const EXIT_BEAT_S = 1.6;                  // hold on the explosion + message before Intro
 
-const _o = new Vector3();
-const _d = new Vector3();
-const _ray = new Ray();
-
 type Slot = { id: number; label: TextHandle; carrier: Object3D; char: string; locked: boolean };
 
 export function makeNameEntry(ctx: Game): Screen {
-  const { world, text, rendering: render, score, level, hiScore: hi } = ctx;
+  const { world, text, haptics, rendering: render, score, level, hiScore: hi } = ctx;
 
   let slots: Slot[] = [];
-  let okId = -1;
-  let okLabel: TextHandle | undefined;
-  let okCarrier: Object3D | undefined;
+  let ok: Slot | undefined;
   let prompt: TextHandle;
   let t = 0;
   let exitIn = -1;     // >= 0 once OK is confirmed: seconds until we leave
   let next = 'intro';  // where the beat leads — 'run' (level 13) on "13K"
 
   const charNow = (): string => CHARS[Math.floor(t / STEP_S) % CHARS.length];
+  const lockedCount = (): number => slots.filter((s) => s.locked).length;
 
   // A label parented straight to the actor mesh sits at the capsule's centre —
   // buried in the body. Hang it on a carrier lifted just above the capsule top;
   // the carrier rides the mesh's rise and the voxel engine billboards it.
-  const labelOn = (id: number, str: string): { label: TextHandle; carrier: Object3D } => {
+  const raise = (hole: number, hex: string, tag: number, str: string): Slot | undefined => {
+    const id = world.spawnAtHole(hole, hex, Infinity, tag);
+    if (id < 0) return;
     const carrier = new Object3D();
     carrier.position.y = BODY_HALF_m + 0.045;
     (world.actorMesh(id) ?? render.anchor).add(carrier);
-    return { label: text.show(str, carrier, { color: HUD_TEXT }), carrier };
-  };
-
-  const drop = (label: TextHandle, carrier: Object3D): void => {
-    text.remove(label);
-    carrier.parent?.remove(carrier);
+    return { id, label: text.show(str, carrier, { color: HUD_TEXT }), carrier, char: str, locked: false };
   };
 
   const raiseSlot = (i: number): void => {
-    const id = world.spawnAtHole(HOLES[i], RAINBOW[PAIR[i][0]], Infinity, i);
-    if (id < 0) return;
-    const { label, carrier } = labelOn(id, charNow());
-    slots.push({ id, label, carrier, char: charNow(), locked: false });
+    const s = raise(HOLES[i], RAINBOW[PAIR[i][0]], i, charNow());
+    if (s) slots.push(s);
   };
 
-  const raiseOk = (): void => {
-    okId = world.spawnAtHole(HOLES[3], OK_HEX, Infinity, OK_TAG);
-    if (okId < 0) return;
-    const { label, carrier } = labelOn(okId, 'OK');
-    okLabel = label;
-    okCarrier = carrier;
+  // Remove a slot's actor and label; `explode` first bursts it (the standard hit explosion).
+  const lower = (s: Slot, explode: boolean): void => {
+    const r = world.despawnActor(s.id);
+    if (explode && r) world.burstSparkles(r.position, r.color, 'explode');
+    text.remove(s.label);
+    s.carrier.parent?.remove(s.carrier);
   };
 
-  const lockedCount = (): number => {
-    let n = 0;
-    for (const s of slots) if (s.locked) n++;
-    return n;
-  };
-
-  // Standard hit explosion at the actor's position, then remove it.
-  const burst = (id: number): void => {
-    const r = world.despawnActor(id);
-    if (r) world.burstSparkles(r.position, r.color, 'explode');
-  };
-
-  const dropOk = (): void => {
-    if (okLabel && okCarrier) drop(okLabel, okCarrier);
-    okLabel = undefined;
-    okCarrier = undefined;
-  };
-
-  const sinkOk = (): void => {
-    burst(okId);
-    dropOk();
-    okId = -1;
+  const clear = (explode: boolean): void => {
+    for (const s of ok ? [...slots, ok] : slots) lower(s, explode);
+    slots = [];
+    ok = undefined;
   };
 
   const confirm = (): void => {
-    if (slots.length < 3 || lockedCount() < 3) return;
-
     const name = slots.map((s) => s.char).join('');
     hi.submit(score.value, name);
-
-    for (const s of slots) { burst(s.id); drop(s.label, s.carrier); }
-    burst(okId);
-    dropOk();
-    slots = [];
-    okId = -1;
+    clear(true);
 
     if (name === L13_NAME) {
       try { localStorage.setItem('chromlins.l13', '1'); } catch { /* not persisted */ }
@@ -127,10 +94,7 @@ export function makeNameEntry(ctx: Game): Screen {
   return {
     enter() {
       t = 0;
-      exitIn = -1;
       next = 'intro';
-      slots = [];
-      okId = -1;
       prompt = text.show('NEW HI', render.hudAnchor, { color: HUD_TEXT });
       raiseSlot(0);
     },
@@ -156,36 +120,28 @@ export function makeNameEntry(ctx: Game): Screen {
     select(cmd: SelectCommand): void {
       if (exitIn >= 0) return;
 
-      _o.setFromMatrixPosition(cmd.transform.matrixWorld);
-      _d.set(0, 0, -1).transformDirection(cmd.transform.matrixWorld);
-      const hit = world.hitTestActor(_ray.set(_o, _d), cmd.reach || undefined);
-      if (!hit) return;
-      const id = hit.id;
+      const hit = world.touch(cmd.ray, cmd.reach || undefined); // same 'hit' cue as the run
+      if (!hit) { world.whiff(cmd.ray); return; }    // same whiff puff + 'miss' cue
+      haptics.pulse(cmd.handedness);
+      if (hit.id === ok?.id) { confirm(); return; }
 
-      if (id === okId) { confirm(); return; }
+      const i = slots.findIndex((x) => x.id === hit.id);
+      if (i < 0) return;
+      const s = slots[i];
 
-      const s = slots.find((x) => x.id === id);
-      if (!s) return;
-      const i = slots.indexOf(s);
-
-      if (s.locked) {
-        s.locked = false;
-        world.recolorActor(s.id, RAINBOW[PAIR[i][0]]);
-        if (okId >= 0 && lockedCount() < 3) sinkOk(); // fewer than 3 locked -> OK goes away
-      } else {
-        s.locked = true;
-        world.recolorActor(s.id, RAINBOW[PAIR[i][1]]);
-        if (i < 2 && slots.length === i + 1) raiseSlot(i + 1);
-        else if (slots.length === 3 && lockedCount() === 3 && okId < 0) raiseOk();
+      s.locked = !s.locked;
+      world.recolorActor(s.id, RAINBOW[PAIR[i][+s.locked]]);
+      if (!s.locked) {
+        if (ok) { lower(ok, true); ok = undefined; } // OK is only up while all three are locked
+      } else if (i < 2 && slots.length === i + 1) {
+        raiseSlot(i + 1);
+      } else if (!ok && lockedCount() === 3) {
+        ok = raise(HOLES[3], OK_HEX, OK_TAG, 'OK');
       }
     },
 
     exit(): void {
-      for (const s of slots) { drop(s.label, s.carrier); world.despawnActor(s.id); }
-      slots = [];
-      if (okId >= 0) world.despawnActor(okId);
-      okId = -1;
-      dropOk();
+      clear(false);
       text.remove(prompt);
       exitIn = -1;
     },

@@ -1,8 +1,6 @@
-import { Ray, Vector3 } from 'three';
 import type { Game } from '../core/Game';
 import type { Screen } from '../core/sm';
 import type { SelectCommand } from '../commands/SelectCommand';
-import type { ITransform } from '../types/ITransform';
 import { LEVELS, LEVEL_COUNT, L13 } from '../core/levels';
 import type { LevelConfig } from '../core/levels';
 import { RAINBOW, HUD_TEXT } from '../core/palette';
@@ -21,12 +19,6 @@ const UNICORN_UP_MAX_S = 2.5;
 
 const TICK_FROM_S = 5;          // countdown pulse plays for the last N seconds
 
-// scratch — a select fires rarely, but reuse anyway (matches the codebase style)
-const _origin = new Vector3();
-const _dir = new Vector3();
-const _ray = new Ray();
-const _hit = new Vector3();
-
 export function makeRun(ctx: Game): Screen {
   const { world, audio, haptics, text, rendering: render, level } = ctx;
   const scoring = new Scoring(ctx);
@@ -36,25 +28,6 @@ export function makeRun(ctx: Game): Screen {
   let spawnCooldown = 0;
   let timerLabel: TextHandle | null = null;
   let lastShownSecond = -1;
-
-  const rayFrom = (t: ITransform): Ray => {
-    _origin.setFromMatrixPosition(t.matrixWorld);
-    _dir.set(0, 0, -1).transformDirection(t.matrixWorld);
-    return _ray.set(_origin, _dir);
-  };
-
-  // Where the last aimed ray (_ray, still set from rayFrom) crossed the board
-  // plane, returned in anchor-local space — the same frame a hit position is in,
-  // so the puff lands on the surface. null if the aim never meets the plane.
-  const whiffPoint = (): Vector3 | null => {
-    const d = _ray.direction;
-    if (Math.abs(d.y) < 1e-4) return null;
-    const planeY = render.anchor.getWorldPosition(_hit).y;
-    const dist = (planeY - _ray.origin.y) / d.y;
-    if (dist <= 0) return null;
-    _hit.copy(_ray.origin).addScaledVector(d, dist);
-    return render.anchor.worldToLocal(_hit);
-  };
 
   const trySpawn = () => {
     const free = world.freeHoles();
@@ -87,9 +60,9 @@ export function makeRun(ctx: Game): Screen {
     // the unicorn is the penalty path, everything else goes to Scoring. Completing
     // every color → win with a leftover-time bonus, then advance the level.
     select(cmd: SelectCommand) {
-      const removed = world.hit(rayFrom(cmd.transform), cmd.reach || undefined);
+      const removed = world.hit(cmd.ray, cmd.reach || undefined);
       if (!removed) {
-        const p = whiffPoint(); if (p) world.spark(p); // show where a swing at nothing landed
+        world.whiff(cmd.ray); // show where a swing at nothing landed
         return;
       }
 

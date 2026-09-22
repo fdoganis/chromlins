@@ -4,8 +4,8 @@
 // (spawn/hit/unicorn, via AudioManager.playAt); board-wide cues (win/over/
 // tick/music) are RunState/WinState/GameOverState's own playSFX/playBGM calls.
 // No game rules (cadence, colors, scoring) live here.
-import { Color } from 'three';
-import type { Object3D, Vector3, Ray, PerspectiveCamera } from 'three';
+import { Color, Vector3 } from 'three';
+import type { Object3D, Ray, PerspectiveCamera } from 'three';
 
 import { Gameboard } from './Gameboard';
 import { Actors } from './Actors';
@@ -17,6 +17,7 @@ import type { AudioManager } from '../audio/AudioManager';
 
 const PROXIMITY_R_m = 0.08; // hand/touch fallback radius when the ray misses (actor r = 0.05)
 const DECOY_PUFF = new Color(0xd8899b); // pink "ow" burst when the unicorn is wrongly tapped
+const _hit = new Vector3(); // scratch for whiff()
 
 export class World {
   #root: Object3D;
@@ -57,10 +58,16 @@ export class World {
     return spawned.id;
   }
 
-  // Non-destructive hit query (NameEntryState decides what a hit means — lock a
-  // letter, revert one, or confirm — none of which despawn the way World.hit does).
-  hitTestActor(ray: Ray, radius = PROXIMITY_R_m): ActorHit | null {
-    return this.#actors.hitTest(ray, radius);
+  // Ray/proximity query that plays the standard cue from the body it touched
+  // ('unicorn' for a decoy, else 'hit'). Non-destructive, so a caller can decide
+  // what a touch means (NameEntryState: lock a letter, revert one, or confirm),
+  // where World.hit below removes the body.
+  touch(ray: Ray, radius = PROXIMITY_R_m): ActorHit | null {
+    const h = this.#actors.hitTest(ray, radius);
+    if (!h) return null;
+    const mesh = this.#actors.meshOf(h.id);
+    if (mesh) try { this.#audio.playAt(mesh, h.decoy ? 'unicorn' : 'hit'); } catch { /* audio may be unavailable */ }
+    return h;
   }
 
   // A live actor's mesh (NameEntryState parents its cycling letter label to it,
@@ -84,12 +91,19 @@ export class World {
     this.#sparkles.burst(origin, color, mode);
   }
 
-  // Colourless mini-puff where an aimed swing hit nothing, plus a subtle
-  // 'miss' cue from that same point — no actor mesh exists there to hang
-  // positional audio off of, so playAtPoint makes its own throwaway emitter.
-  spark(origin: Vector3): void {
-    this.#sparkles.spark(origin);
-    try { this.#audio.playAtPoint(this.#root, origin, 'miss'); } catch { /* audio may be unavailable */ }
+  // An aimed swing that hit nothing: a colourless mini-puff plus a subtle 'miss'
+  // cue where the ray crosses the board plane (anchor-local, the frame a hit
+  // position is in, so it lands on the surface). No actor mesh exists there to
+  // hang positional audio off of, so playAtPoint makes its own throwaway
+  // emitter. Nothing if the aim never meets the plane.
+  whiff(ray: Ray): void {
+    const d = ray.direction;
+    if (Math.abs(d.y) < 1e-4) return;
+    const dist = (this.#root.getWorldPosition(_hit).y - ray.origin.y) / d.y;
+    if (dist <= 0) return;
+    const at = this.#root.worldToLocal(_hit.copy(ray.origin).addScaledVector(d, dist));
+    this.#sparkles.spark(at);
+    try { this.#audio.playAtPoint(this.#root, at, 'miss'); } catch { /* audio may be unavailable */ }
   }
 
   // Aim a ray at the live actors. A normal body is removed and the collect
@@ -97,15 +111,12 @@ export class World {
   // and the hit is still reported so RunState can run its penalty. Returns
   // { tag, color, position } or null.
   hit(ray: Ray, radius = PROXIMITY_R_m): RemovedActor | null {
-    const h = this.#actors.hitTest(ray, radius);
+    const h = this.touch(ray, radius);
     if (!h) return null;
-    const mesh = this.#actors.meshOf(h.id); // grab it before despawn — sound plays from the hole
     if (h.decoy) {
       this.#sparkles.burst(h.position, DECOY_PUFF, 'explode');
-      if (mesh) try { this.#audio.playAt(mesh, 'unicorn'); } catch { /* audio may be unavailable */ }
       return { tag: h.tag, color: DECOY_PUFF, position: h.position };
     }
-    if (mesh) try { this.#audio.playAt(mesh, 'hit'); } catch { /* audio may be unavailable */ }
     return this.#collect(this.#actors.despawn(h.id));
   }
 
