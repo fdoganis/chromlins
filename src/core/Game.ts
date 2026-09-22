@@ -6,6 +6,7 @@ import { Level } from './Level';
 import { HiScore } from './HiScore';
 import { RenderingManager } from '../rendering/RenderingManager';
 import { InputManager } from '../input/InputManager';
+import { HandOccluder } from '../world/HandOccluder'; // BYTE-COST MEASUREMENT ONLY — see HAND-OCCLUSION.md, not a real feature yet
 import { AudioManager } from '../audio/AudioManager';
 import { World } from '../world/World';
 import { SelectCommand } from '../commands/SelectCommand';
@@ -33,6 +34,7 @@ export class Game {
   readonly level = new Level();
   readonly hiScore = new HiScore();
   #input: InputManager;
+  #handOccluder: HandOccluder;
   #sm: Sm;
   #hiLabel: TextHandle;
   #hiShown = -1;
@@ -47,6 +49,17 @@ export class Game {
     this.world = new World(this.rendering.anchor, this.audio, this.rendering.camera);
     this.haptics = new Haptics(this.rendering.renderer);
     this.#input = new InputManager(this.rendering.renderer, this.rendering.scene, this.rendering.anchor);
+    const handDebug = __DEV__ && 'handdebug' in getQuery();
+    const hands = [this.rendering.renderer.xr.getHand(0), this.rendering.renderer.xr.getHand(1)];
+    this.#handOccluder = new HandOccluder(this.rendering.scene, hands, { debug: handDebug });
+    if (handDebug) {
+      // Dynamic import: pulls in XRHandModelFactory + GLTFLoader (and fetches
+      // the ground-truth hand model from a CDN) only when this dev flag is
+      // set, not on every dev session — see handOcclusionDebug.ts.
+      import('./handOcclusionDebug').then(({ installHandOcclusionDebug }) => {
+        installHandOcclusionDebug(this.rendering.renderer, this.rendering.scene, this.rendering.camera, hands, this.#handOccluder);
+      });
+    }
     this.text = new TextManager(new VoxelTextEngine(this.rendering.scene, this.rendering.camera));
 
     // Persistent HUD: the all-time best, shown everywhere. Game.update() ticks it
@@ -112,6 +125,7 @@ export class Game {
   }
 
   update(delta: number, frame?: XRFrame) {
+    this.#handOccluder.update(); // BYTE-COST MEASUREMENT ONLY
     this.#sm.update(delta, frame);
     this.text.update(delta); // labels are global, not owned by the active state
 
