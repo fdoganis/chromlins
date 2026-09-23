@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 // ?name jumps straight into NameEntryState (dev-only, folds out of prod). Space
 // is the keyboard "select": NameEntryState routes it to the first cycling slot,

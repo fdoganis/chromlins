@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 import { renderCue } from './lib/render-cue.mjs';
 
 // "maybe playAt does not work, or is not loud enough compared to BGM" — a

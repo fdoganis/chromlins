@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 import * as path from 'node:path';
 
 // Drives a real emulated WebXR controller (IWER) to exercise the pointer/

@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 import * as path from 'node:path';
 
 // whack.spec drives a clean `animate_to`. This one drives the emulated hand

@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 import * as path from 'node:path';
 
 // Quest-style hands (IWER) with the dev `?xr=vr` flag: the Vision Pro placement

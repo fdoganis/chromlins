@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 import { inflateSync } from 'node:zlib';
 
 // Regression guard for the "mane buried in the pit" bug: the unicorn only PEEKS

@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 import * as path from 'node:path';
 import { mkdirSync, writeFileSync } from 'node:fs';
 

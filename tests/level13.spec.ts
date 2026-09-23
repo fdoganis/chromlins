@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 // ?l13 drops straight into the hidden level-13 run (dev-only, folds out of prod).
 // Spamming Space collects random actors through the short 35s round; this checks

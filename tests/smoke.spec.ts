@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 // Non-visual smoke: the app boots clean and actually renders + animates.
 // No pixel baseline, no injected globals — reads console/pageerror + the canvas.

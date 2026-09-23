@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 import { execFileSync } from 'node:child_process';
 import { createServer, type Server } from 'node:http';
 import { readFileSync } from 'node:fs';

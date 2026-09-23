@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 import * as path from 'node:path';
 
 // Drives an emulated WebXR hand (IWER) to exercise the HandSource "whack"

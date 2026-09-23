@@ -1,7 +1,8 @@
 import { defineConfig, devices } from '@playwright/test';
 
 // One chromium project, one smoke spec. Playwright boots `npm run dev` itself.
-// Nothing here is bundled — @playwright/test is a devDependency only.
+// Nothing here is bundled — @playwright/test and monocart-reporter are
+// devDependencies only.
 export default defineConfig({
   testDir: './tests',
   // tests/unit/ is plain node:test (see npm run test:unit), not a Playwright
@@ -15,7 +16,24 @@ export default defineConfig({
   workers: 1,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
-  reporter: process.env.CI ? 'github' : 'list',
+  // Every spec imports test/expect from tests/fixtures.ts, not
+  // '@playwright/test' directly — that file's automatic per-test fixture is
+  // what actually collects the coverage this reporter turns into a report;
+  // the reporter alone does nothing without it. Browsable, per-test-attributed
+  // line coverage, merged across the whole suite, in monocart-report/index.html
+  // — replaces the old one-off scripts/coverage.mjs (a single hand-driven
+  // flow, no per-test breakdown, no clickable lines).
+  reporter: [
+    [process.env.CI ? 'github' : 'list'],
+    ['monocart-reporter', {
+      name: 'chromlins e2e coverage',
+      outputFile: './monocart-report/index.html',
+      coverage: {
+        // Only our own source, not three.js/node_modules/test harness code.
+        sourceFilter: (sourcePath: string) => sourcePath.search(/\/src\//) !== -1,
+      },
+    }],
+  ],
   use: {
     baseURL: 'http://localhost:5173',
     trace: 'on-first-retry'

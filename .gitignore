@@ -45,3 +45,5 @@ blob-report
 tests/fixtures/
 build/external-api.externs.js
 .device-test
+monocart-report
+.claude/
