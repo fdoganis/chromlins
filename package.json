@@ -23,6 +23,7 @@
     "find-uncalled-methods": "node scripts/find-uncalled-methods.mjs",
     "knip": "knip",
     "bundle-explorer": "node scripts/bundle-explorer.mjs",
+    "measure-pack": "node scripts/measure-pack.mjs",
     "smoke": "node scripts/smoke.mjs",
     "device-test": "node scripts/serve-packed.mjs",
     "test:e2e": "playwright test",
