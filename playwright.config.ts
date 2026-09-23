@@ -29,8 +29,18 @@ export default defineConfig({
       name: 'chromlins e2e coverage',
       outputFile: './monocart-report/index.html',
       coverage: {
-        // Only our own source, not three.js/node_modules/test harness code.
-        sourceFilter: (sourcePath: string) => sourcePath.search(/\/src\//) !== -1,
+        // monocart resolves each Vite-served .ts module's OWN inline sourcemap
+        // and calls this with `sourcemap.sources[0]`, which Vite's dev server
+        // sets to the bare filename ("Game.ts"), never a path. A path-shaped
+        // filter (e.g. matching "/src/") silently matches nothing and drops
+        // every real file, confirmed by logging what actually arrives here.
+        // The only non-game entries seen this way are vite's own client/env
+        // shims and pre-bundled three.js; excluding those by name is the only
+        // real signal available, since there's no directory to filter on.
+        sourceFilter: (sourcePath: string) =>
+          sourcePath !== 'client' &&
+          !sourcePath.endsWith('.mjs') &&
+          !sourcePath.startsWith('three'),
       },
     }],
   ],
