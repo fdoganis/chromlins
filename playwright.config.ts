@@ -7,6 +7,7 @@ export default defineConfig({
   // tests/unit/ is plain node:test (see npm run test:unit), not a Playwright
   // spec — it has no @playwright/test import and would fail if collected here.
   testIgnore: ['**/unit/**'],
+  globalSetup: './tests/global-warmup.ts',
   // The two IWER specs each drive a full WebXR-emulated render loop + a long
   // screenshot sweep. Run in parallel they oversubscribe the CPU and starve
   // each other into timeouts, so the 4-test suite runs serially — deterministic
