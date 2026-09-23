@@ -74,7 +74,10 @@ export class Rainbow {
     for (let i = 0; i < ARCS; i++) this.setFill(i, 0);
   }
 
-
+  // Currently unreachable (nothing tears down a whole Game instance today),
+  // but correct: every arc's geometry/material is created fresh in this
+  // instance's own constructor, never a shared static, so freeing them here
+  // is safe.
   dispose(): void {
     for (const arc of [...this.#tracks, ...this.#fills]) {
       this.#root.remove(arc);

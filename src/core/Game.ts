@@ -144,6 +144,20 @@ export class Game {
   // first playBGM / playSFX doesn't block a frame.
   preload() { this.audio.prewarm(); }
 
+  start() {
+    this.rendering.renderer.setAnimationLoop(new GameLoop(this).tick);
+  }
+
+  // Currently unreachable: main.ts creates exactly one Game and never calls
+  // this — there's no restart-in-place or beforeunload flow today, and
+  // closing the tab reclaims everything the browser would anyway, so there's
+  // nothing to wire this to yet. Kept, correct, for the day a "back to menu,
+  // play again without reloading the page" flow needs it: every child's own
+  // dispose() below only frees its own per-instance three.js resources
+  // (renderer state, geometries/materials it created itself), deliberately
+  // never a module-level shared static another live or future object still
+  // needs — see World.dispose()'s own comment for the one place that
+  // distinction actually mattered.
   dispose() {
     this.rendering.renderer.setAnimationLoop(null);
     this.#input.dispose();
@@ -151,10 +165,5 @@ export class Game {
     this.audio.dispose();
     this.rendering.dispose();
     this.text.dispose();
-
-  }
-
-  start() {
-    this.rendering.renderer.setAnimationLoop(new GameLoop(this).tick);
   }
 }

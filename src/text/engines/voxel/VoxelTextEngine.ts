@@ -111,10 +111,6 @@ export class VoxelTextEngine implements ITextEngine {
     h.indices = [];
   }
 
-  dispose(): void {
-    this.#pool.dispose();
-  }
-
   #paint(indices: number[], colorHex: string): void {
     const color = new Color(colorHex);
     for (const i of indices) this.#pool.setColor(i, color);
@@ -143,5 +139,12 @@ export class VoxelTextEngine implements ITextEngine {
     const s = this.#voxelSize;
     const originX = -width / 2;
     return cells.map(([col, row]) => new Vector3((originX + col) * s, (height - 1 - row) * s, 0));
+  }
+
+  // Currently unreachable — see InstancedPool.dispose()'s own comment. This
+  // pool's geometry (`maxInstances` up to 1024*1024) is the single largest
+  // GPU allocation in the app, the one most worth freeing on a real restart.
+  dispose(): void {
+    this.#pool.dispose();
   }
 }

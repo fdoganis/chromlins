@@ -7,8 +7,8 @@ import { Raycaster, Vector3 } from 'three';
 import type { Object3D, PerspectiveCamera, Ray, Color } from 'three';
 import { RAINBOW } from '../core/palette';
 import { Actor } from './Actor';
-import { Chromlin, disposeChromlinAssets } from './Chromlin';
-import { Unicorn, disposeUnicornAssets } from './Unicorn';
+import { Chromlin } from './Chromlin';
+import { Unicorn } from './Unicorn';
 import type { Hole } from './Hole';
 
 const _actorWorld = new Vector3();
@@ -103,10 +103,13 @@ export class Actors {
 
   clear(): void { for (const a of this.#cast) a.hide(); }
 
-  dispose(): void {
-    this.clear();
-    Actor.GEO.dispose();
-    disposeChromlinAssets();
-    disposeUnicornAssets();
-  }
+  // No dispose() here, deliberately, not just an oversight: this class used
+  // to have one that freed Actor.GEO and Chromlin/Unicorn's eye/horn/mane
+  // geometries and materials — every one of those is a module-level static,
+  // shared by every Actor this page will ever create, not owned by this
+  // particular Actors instance. Freeing them on a hypothetical restart would
+  // break the NEXT Game()'s actors (already-disposed geometry reused). A
+  // correct version would need to separate genuinely per-instance state (the
+  // fresh MeshPhongMaterial each Actor makes in its own constructor) from
+  // the shared statics — not done here. See World.dispose()'s own comment.
 }

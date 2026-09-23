@@ -31,6 +31,7 @@ export class TextManager {
       if (anchor) this.#engine.sync(handle, anchor, delta); // TODO: QUESTION: NAMING: why call this "sync" instead of "update" for example?
   }
 
+  // Currently unreachable — see InstancedPool.dispose()'s own comment.
   // TODO: QUESTION: remove vs dispose? confusing API
   dispose() {
     for (const handle of this.#labels.keys()) this.#engine.destroy(handle);

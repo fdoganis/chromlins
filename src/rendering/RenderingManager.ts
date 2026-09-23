@@ -197,6 +197,9 @@ export class RenderingManager {
     this.renderer.setSize(window.innerWidth, window.innerHeight);
   };
 
+  // Currently unreachable (nothing tears down a whole Game instance today),
+  // but correct and the single most impactful one: frees the WebGL context's
+  // own internal state (compiled programs, buffers), not just our objects.
   dispose() {
     window.removeEventListener('resize', this.#onResize);
     this.renderer.dispose();

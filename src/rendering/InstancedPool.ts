@@ -55,6 +55,10 @@ export class InstancedPool {
     if (this.#mesh.instanceColor) this.#mesh.instanceColor.needsUpdate = true;
   }
 
+  // Currently unreachable (nothing tears down a whole Game instance today —
+  // see .doc/DECISIONS.md), but correct to call: this geometry/material are
+  // created fresh by each caller (Sparkles/VoxelTextEngine own construction),
+  // never a shared module-level static, so freeing them here is safe.
   dispose(): void {
     this.#mesh.geometry.dispose();
     this.#material.dispose();

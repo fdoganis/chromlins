@@ -35,6 +35,7 @@ export class Gameboard {
     for (const h of this.#holes) h.free = true;
   }
 
+  // Currently unreachable — see Hole.dispose()'s own comment.
   dispose(): void {
     for (const h of this.#holes) h.dispose();
   }

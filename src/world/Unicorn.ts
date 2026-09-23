@@ -203,8 +203,3 @@ function buildSpringMane(body: Object3D): ManeUpdate {
   };
 }
 
-export function disposeUnicornAssets(): void {
-  for (const s of strands) s.geo.dispose();
-  for (const g of [hornGeo, eyeGeo, cheekGeo, muzzleGeo]) g.dispose();
-  for (const m of [pinkMat, ...maneMat]) m.dispose(); // BLACK_EYE_MAT is owned by Chromlin
-}

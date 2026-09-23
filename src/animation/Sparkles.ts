@@ -147,6 +147,7 @@ export class Sparkles {
       }
   }
 
+  // Currently unreachable — see InstancedPool.dispose()'s own comment.
   dispose() {
     this.#pool.dispose();
   }

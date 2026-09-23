@@ -59,7 +59,3 @@ export class Chromlin extends Actor {
   }
 }
 
-export function disposeChromlinAssets(): void {
-  for (const g of [eyeGeo, pupilGeo]) g.dispose();
-  for (const m of [whiteMat, BLACK_EYE_MAT]) m.dispose();
-}

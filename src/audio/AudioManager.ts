@@ -177,11 +177,6 @@ export class AudioManager {
     this.#listener.setMasterVolume(0);
   }
 
-  dispose() {
-    this.stopBGM();
-    this.#listener.removeFromParent();
-  }
-
   #createSource(id: string, context: AudioContext): SoundHandle | null {
     const buffer = this.#bufferFor(id, context);
     if (!buffer) return null;
@@ -212,5 +207,12 @@ export class AudioManager {
       this.#buffers.set(id, buffer);
     }
     return buffer;
+  }
+
+  // Currently unreachable (nothing tears down a whole Game instance today),
+  // but correct: #listener is this instance's own, not a shared static.
+  dispose() {
+    this.stopBGM();
+    this.#listener.removeFromParent();
   }
 }

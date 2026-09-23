@@ -20,5 +20,10 @@ export class InputProcessor {
   // leak into the next one.
   clear() { for (const src of this.#sources) src.queue.length = 0; }
 
+  // Currently unreachable (nothing tears down a whole Game instance today),
+  // but correct: SpatialInputSource's own dispose() removes DOM/three.js
+  // event listeners it added to a persistent controller/hand Group — real
+  // per-instance state, not a shared static, and worth freeing so a restart
+  // doesn't double-bind the same node.
   dispose() { for (const src of this.#sources) src.dispose(); }
 }

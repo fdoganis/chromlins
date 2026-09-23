@@ -32,8 +32,7 @@ const PIT_DARK = 0x0a0a0e;  // the floor: near-black
 
 // --- shared resources (built once, referenced by every Hole) ---
 // Not disposed: they live for the page lifetime, which matches the rest of the
-// codebase (RenderingManager never frees its geometry either, and Game.dispose
-// is not wired up). Hole.dispose() only detaches this hole's meshes.
+// codebase — Game is created once in main.ts and never torn down.
 const BRIM_GEO = new RingGeometry(HOLE_R_m, BRIM_R_m, 28).rotateX(-Math.PI / 2);
 const CROWN_GEO = new CylinderGeometry(CROWN_R_m, CROWN_R_m, PIT_DEPTH_m, 24, 1, true);
 const PIT_GEO = new CylinderGeometry(HOLE_R_m, HOLE_R_m, PIT_DEPTH_m, 24, 1, true);
@@ -94,6 +93,10 @@ export class Hole {
     root.add(...this.#fixtures);
   }
 
+  // Currently unreachable (nothing tears down a whole Game instance today),
+  // but correct: only detaches this hole's own meshes from the scene — the
+  // shared geometries/materials above are a deliberate page-lifetime static,
+  // never freed here (see the comment on them).
   dispose(): void {
     for (const f of this.#fixtures) this.#root.remove(f);
   }

@@ -153,8 +153,14 @@ export class World {
   // is enough, no separate board reset needed.
   clearActors(): void { this.#actors.clear(); }
 
+  // Currently unreachable (nothing tears down a whole Game instance today).
+  // Deliberately does NOT call #actors.dispose(): Actors/Chromlin/Unicorn's
+  // eye/horn/mane geometries and materials are module-level statics, shared
+  // by every Actor that will ever exist (Actor.GEO itself the clearest
+  // example) — freeing them here would be a real bug on any future restart
+  // (the next Game()'s actors would reuse already-disposed geometry), not
+  // dead code worth restoring. See .doc/DECISIONS.md.
   dispose(): void {
-    this.#actors.dispose();
     this.#board.dispose();
     this.#rainbow.dispose();
     this.#sparkles.dispose();

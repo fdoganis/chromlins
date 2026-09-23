@@ -35,5 +35,7 @@ export class InputManager {
 
   get commands() { return this.#processor.commands; }
   collect() { this.#processor.collect(); }
+
+  // Currently unreachable — see InputProcessor.dispose()'s own comment.
   dispose() { this.#processor.dispose(); }
 }

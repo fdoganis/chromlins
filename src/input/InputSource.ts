@@ -6,5 +6,5 @@ export abstract class InputSource {
 
   poll() { } // needed for non event-based implementations
 
-  dispose() { }
+  dispose() { } // overridden by sources that actually hold something to release (SpatialInputSource)
 }
