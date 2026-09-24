@@ -308,6 +308,12 @@ question above settled first, or it will just be gamed by that one segment.
   above and `.doc/SIZE-AUDIT.md` for the current, authoritative number (it
   moves as other work lands; don't trust the number in this file over that
   one).
+- **TODO: make sure text never gets occluded.** `OCC_ORDER = -20` now makes
+  the hand occluder draw before nearly everything else in the scene, winning
+  the depth test against anything at the same or farther depth. Not checked:
+  whether HUD/world text (score, timer, HI, the `+N` popups) can end up
+  behind a real hand's depth and read as clipped or missing. Not built,
+  not measured.
 
 ## Where else could those 64 B come from?
 
