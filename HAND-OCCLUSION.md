@@ -227,15 +227,87 @@ question above settled first, or it will just be gamed by that one segment.
   and a real occluded virtual object** — this test measures silhouette
   overlap against a reference mesh, not "does a rainbow arc actually
   disappear behind a real finger."
-- **`renderOrder` / blend-order against the rest of the scene** — reasoned
-  about (ordinary depth testing should just work, unlike `Hole.ts`'s
-  early-`renderOrder` trick), not measured on device.
-- **No pass/fail threshold set** on the IoU — the spec only asserts both masks
+- **`renderOrder`, RESOLVED, and the earlier reasoning here was wrong.**
+  "Ordinary depth testing should just work" is false for a `colorWrite:false`
+  occluder specifically: color and depth are separate buffers, and a draw
+  that never writes color can only ever *prevent* a later draw from painting
+  (by winning the depth test first), it can never undo a color a farther,
+  earlier draw already committed. Confirmed by building a real object in
+  front of a real decoy in the actual game scene: at the default renderOrder
+  (tied with everything else, the original bug's exact condition) the decoy
+  stayed fully visible, only forcing the occluder to draw first fixed it.
+  Shipped as `HandOccluder.ts`'s `OCC_ORDER = -20` (strictly before
+  `Hole.ts`'s own `-10`, since a real hand is the frontmost thing this game
+  ever draws). See `tests/hand-occlusion-scene.spec.ts`,
+  `tests/hand-occlusion-plain*.spec.ts`, and
+  `tests/hand-occlusion-minimal.spec.ts` (the last one reproduces the bug and
+  its fix on an empty scene with no XR at all, the clearest of the four).
+- **No pass/fail threshold set** on the IoU, the spec only asserts both masks
   are non-empty, so a future regression that silently breaks joint tracking
   still fails loudly, but a smaller, real drop in quality would not. 0.985 on
-  this one pose is a reasonable candidate floor once checked against a couple
-  more poses.
-- **64 B still over budget** in aggressive mode (13,376 B) — see "Byte cost."
+  the default pose is a reasonable candidate floor, but see the next item,
+  it's not the whole picture.
+- **Curled poses visibly protrude past the real hand's silhouette, found,
+  not yet fixed.** `tests/hand-occlusion-poses.spec.ts` measures IoU across
+  `relaxed`/`pinch`/`point` (IWER's built-in poses): 0.985 / 0.987 / 0.982,
+  barely moves, but the screenshots show real damage the aggregate number
+  hides. `point` (fist + one extended finger) produces a chaotic, spiky
+  cyan mass sticking out well past the real hand's curled fingers; `pinch`
+  shows a clear rightward offset at the fingertips. Root cause: `boneMatrix()`
+  scales ONE shared unit `CapsuleGeometry(1,1,2,6)` non-uniformly per
+  instance by `(avgRadius, length, avgRadius)`. That stretches the rounded
+  end caps along with the cylinder, since they're baked into the same mesh,
+  not a separate part. Two adjacent segments at a sharp bend have different
+  lengths, so their caps are stretched by different amounts and don't blend
+  where they meet. More polygon segments (see the next bullet) only smooths
+  the facets, not this stretch.
+  - **Candidate fix, not yet built: uniformly-scaled spheres at internal
+    joints.** One instanced sphere per joint (not just the existing
+    `debug`-only markers, promoted to the real, always-invisible occlusion
+    set), scaled uniformly by that joint's own radius so it doesn't inherit
+    the stretch, sitting exactly where two bone capsules meet and covering
+    the seam. Reuses the same `InstancedPool`/`SphereGeometry` machinery
+    `debug` mode already has. Cost: one instance per covered joint per hand,
+    real but small, not measured.
+  - **Reconsider the lathe profile, the earlier ablation compared shapes,
+    not smoothing quality.** The capsule won on size and on the one
+    `relaxed`-pose IoU number (see "Byte cost"), but that comparison never
+    exercised a curled pose. Worth another look now that this file has a
+    real per-pose regression tool, not a reason to assume the original call
+    was wrong.
+- **`radialSegments`/`capSegments` are low (6/6), cosmetic only, but cheap
+  to raise.** This is why the occluder looks faceted/"pointy" in every
+  `debug`/`?occluder=visible` screenshot in this doc and in the test
+  attachments. Doesn't affect real occlusion (invisible in production, and
+  IoU is already high with this shape) or shipped bytes (procedural args,
+  not baked vertex data), purely how it reads when made visible for
+  debugging. Untouched so far because nobody asked for smoother debug
+  visuals specifically.
+- **Capsule radius could widen with joint velocity, proposed, not built.**
+  The idea: a fast-moving hand's tracked position lags the real hand
+  (tracking latency), so widening the occluder just as it accelerates would
+  give a safety margin against the real hand "outrunning" its own occluder.
+  `HandSource.poll()` already computes exactly this kind of velocity (a
+  position delta over dt) for whack detection, so the math isn't new,
+  only applying it per-joint here is. Needs a previous-position value per
+  joint per hand to diff against each frame, a private array on
+  `HandOccluder` (matching this file's existing `_a`/`_b` scratch-object
+  convention) is the natural place, not `Object3D.userData` (that's
+  per-object, and every bone shares one `InstancedMesh`, so there's no
+  single object to hang per-instance state off of).
+- **An interactive occluder editor, proposed, not built.** Finding the
+  right occluder shape has taken a whole ablation table already (see "Byte
+  cost") and is clearly not settled (see the two items above). A `__DEV__`
+  dev route with live sliders for shape/segments/renderOrder/material,
+  showing the real IoU number update as you drag, would make trying the
+  next idea (or re-trying the lathe) a live experiment instead of a new
+  round of hand-written scratch scripts. `lil-gui` is already an installed
+  devDependency and currently unused (`knip` confirms zero live call sites),
+  built for exactly this.
+- **64 B still over budget** in aggressive mode (13,376 B), see "Byte cost"
+  above and `.doc/SIZE-AUDIT.md` for the current, authoritative number (it
+  moves as other work lands; don't trust the number in this file over that
+  one).
 
 ## Where else could those 64 B come from?
 
