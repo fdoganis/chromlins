@@ -27,7 +27,7 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 const OUT_DIR = 'test-results/hand-occlusion';
 const IDENTITY = { x: 0, y: 0, z: 0, w: 1 };
 
-test('HandOccluder vs three.js ground-truth hand mesh: overlap measurement + screenshots', async ({ page }) => {
+test('HandOccluder vs three.js ground-truth hand mesh: overlap measurement + screenshots', async ({ page }, testInfo) => {
   test.setTimeout(60_000);
   mkdirSync(OUT_DIR, { recursive: true });
 
@@ -84,17 +84,20 @@ test('HandOccluder vs three.js ground-truth hand mesh: overlap measurement + scr
 
   type HandDebug = { measureOverlap(): unknown; showOnly(what: 'both' | 'occluder' | 'mesh'): void };
 
-  await page.evaluate((w) => (window as unknown as { __handDebug: HandDebug }).__handDebug.showOnly(w), 'mesh' as const);
-  await page.waitForTimeout(150);
-  writeFileSync(path.join(OUT_DIR, 'mesh-only.png'), await page.screenshot());
+  // Written to disk (for HAND-OCCLUSION.md's own reference) AND attached to
+  // this test's entry in the monocart report, so they're visible right next
+  // to the pass/fail result instead of only as files under test-results/.
+  async function shootAndAttach(name: string, filename: string, show: 'both' | 'occluder' | 'mesh') {
+    await page.evaluate((w) => (window as unknown as { __handDebug: HandDebug }).__handDebug.showOnly(w), show);
+    await page.waitForTimeout(150);
+    const png = await page.screenshot();
+    writeFileSync(path.join(OUT_DIR, filename), png);
+    await testInfo.attach(name, { body: png, contentType: 'image/png' });
+  }
 
-  await page.evaluate((w) => (window as unknown as { __handDebug: HandDebug }).__handDebug.showOnly(w), 'occluder' as const);
-  await page.waitForTimeout(150);
-  writeFileSync(path.join(OUT_DIR, 'occluder-only.png'), await page.screenshot());
-
-  await page.evaluate((w) => (window as unknown as { __handDebug: HandDebug }).__handDebug.showOnly(w), 'both' as const);
-  await page.waitForTimeout(150);
-  writeFileSync(path.join(OUT_DIR, 'both-visible.png'), await page.screenshot());
+  await shootAndAttach('mesh only (ground truth)', 'mesh-only.png', 'mesh');
+  await shootAndAttach('occluder only', 'occluder-only.png', 'occluder');
+  await shootAndAttach('both visible', 'both-visible.png', 'both');
 
   const overlap = await page.evaluate(() => (window as unknown as { __handDebug: HandDebug }).__handDebug.measureOverlap());
   console.log('HandOccluder vs ground-truth mesh overlap:', overlap);

@@ -46,7 +46,11 @@ export default defineConfig({
   ],
   use: {
     baseURL: 'http://localhost:5173',
-    trace: 'on-first-retry'
+    trace: 'on-first-retry',
+    // Auto-attached to a failing test's entry in the monocart report — a
+    // visible screenshot beats digging through test-results/ by hand.
+    // 'only-on-failure' costs nothing on the (usual) passing run.
+    screenshot: 'only-on-failure'
   },
   projects: [
     {
