@@ -18,12 +18,20 @@ export class InstancedPool {
   #nextRaw = 0;
   #capacity: number;
 
-  constructor(parent: Object3D, geometry: BufferGeometry, capacity: number, material: Material = new MeshBasicMaterial()) {
+  constructor(parent: Object3D, geometry: BufferGeometry, capacity: number, material: Material = new MeshBasicMaterial(), renderOrder = 0) {
     this.#capacity = capacity;
     this.#material = material;
     this.#mesh = new InstancedMesh(geometry, this.#material, capacity);
     this.#mesh.count = 0;
     this.#mesh.frustumCulled = false;
+    // An InstancedMesh's own opaque-queue sort key comes from ITS single
+    // transform (the identity origin every caller here uses), not its
+    // per-instance positions — so instances scattered across the scene (like
+    // HandOccluder's, which can be anywhere) can't rely on the default
+    // distance-based sort to draw before whatever they need to occlude.
+    // renderOrder sidesteps that; default 0 changes nothing for Sparkles/
+    // VoxelTextEngine, which don't need to occlude anything.
+    this.#mesh.renderOrder = renderOrder;
     parent.add(this.#mesh);
   }
 

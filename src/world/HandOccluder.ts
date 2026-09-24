@@ -28,6 +28,33 @@ import { ALL_JOINTS, BONES, boneMatrix } from './handBones';
 
 const DEFAULT_RADIUS_m = 0.008; // three's own XRHandPrimitiveModel fallback, for a runtime that reports no joint radius
 
+// Lower (more negative) draws EARLIER. Confirmed load-bearing, not cosmetic —
+// and NOT a depth-test bug: depth test alone can't make a colorWrite:false
+// occluder hide anything, no matter the draw order, because color and depth
+// are separate buffers. If the target draws FIRST, it paints its color; the
+// occluder drawing after it, even though closer and passing the depth test,
+// only updates depth — colorWrite:false means it never touches color, so the
+// target's pixels just sit there unhidden. Only if the occluder draws FIRST
+// does this work: the target's own later draw then fails ITS depth test and
+// never paints color at all. A colorWrite:false occluder can only ever
+// prevent a draw, never undo one — so it must always draw before whatever it
+// occludes, full stop, on every conforming implementation, no driver quirk
+// involved. (A second, smaller reason the default order was wrong here: this
+// project's InstancedPool computes its opaque-queue sort key from the mesh's
+// own single identity-origin transform, not real per-instance positions, so
+// a hand instance can't even rely on distance-based sorting to usually help.)
+// Measured directly: with the default renderOrder (0), a hand placed in
+// front of a live decoy left it fully visible; forcing a low renderOrder
+// dropped a 39px patch of its color to 15 (matching ordinary coverage
+// imprecision, not a remaining depth bug) — see tests/hand-occlusion-scene.spec.ts.
+//
+// Strictly BEFORE Hole.ts's own OCC_ORDER (-10), not equal to it: a real
+// hand is the frontmost thing this game ever draws — closer to the camera
+// than any virtual geometry, including Hole's own "solid table" trick — so
+// it must win that tie outright, not leave it to the same unreliable
+// same-renderOrder fallback sort that caused this in the first place.
+const OCC_ORDER = -20;
+
 export type HandOccluderOptions = {
   // Also draw a small, VISIBLE sphere at every tracked joint — for checking
   // this class's own alignment against the real (or emulated) hand, not part
@@ -59,7 +86,7 @@ export class HandOccluder {
     this.#occluderMat = occluderMat;
 
     const boneCount = hands.length * (BONES.length + 2); // +2 per hand: the two palm spokes
-    this.#bones = new InstancedPool(scene, new CapsuleGeometry(1, 1, 2, 6), boneCount, occluderMat);
+    this.#bones = new InstancedPool(scene, new CapsuleGeometry(1, 1, 2, 6), boneCount, occluderMat, OCC_ORDER);
     for (let i = 0; i < boneCount; i++) this.#boneIdx.push(this.#bones.allocate()!);
 
     if (options.debug) {
@@ -110,13 +137,15 @@ export class HandOccluder {
     }
   }
 
-  // Debug/measurement only — never called in production. Swaps the occluder
-  // material between its real behavior ('occlude': colorWrite:false,
-  // invisible but writes depth), a visible color ('visible': for seeing or
-  // measuring the occluder's own silhouette), or fully inert ('off': neither
-  // writes color nor depth, so a ground-truth hand model can be measured
-  // without this class's own depth interfering). See HAND-OCCLUSION.md's
-  // comparison tool.
+  // Swaps the occluder material between its real behavior ('occlude':
+  // colorWrite:false, invisible but writes depth), a visible color
+  // ('visible': for seeing or measuring the occluder's own silhouette), or
+  // fully inert ('off': neither writes color nor depth, so a ground-truth
+  // hand model can be measured without this class's own depth interfering).
+  // 'visible' is reachable two ways: HAND-OCCLUSION.md's __DEV__-only
+  // comparison tool, and Game.ts's always-shipped `?occluder=visible` query
+  // flag — the latter is the one real-device check, since __DEV__ code folds
+  // away in production and never reaches a real build.
   setDebugMaterial(mode: 'occlude' | 'visible' | 'off', color = 0x00ffff): void {
     if (mode === 'occlude') { this.#occluderMat.colorWrite = false; this.#occluderMat.depthWrite = true; }
     else if (mode === 'visible') { this.#occluderMat.colorWrite = true; this.#occluderMat.depthWrite = true; this.#occluderMat.color.setHex(color); }
