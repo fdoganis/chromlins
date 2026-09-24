@@ -2,10 +2,11 @@ import { test, expect } from './fixtures';
 
 // Regression guard for the settled hole occluder design (see Hole.ts's own
 // file comment for the two reverted alternatives this replaced, both found
-// broken on real device testing): stencil-based mouth is back, and
-// BRIM_R_m is the new, smaller value.
+// broken on real device testing): stencil-based mouth is back, BRIM_R_m is
+// the new, smaller value, and every hole's geometry uses the same 32 radial
+// segments.
 
-test('the settled hole design: stencil present, small brim', async ({ page }) => {
+test('the settled hole design: stencil present, small brim, harmonized segments', async ({ page }) => {
   test.setTimeout(30_000);
   await page.addInitScript(() => {
     const w = window as any;
@@ -20,14 +21,19 @@ test('the settled hole design: stencil present, small brim', async ({ page }) =>
     const w = window as any;
     let stencilWriters = 0;
     let maxBrimOuterRadius = 0;
+    const segmentCounts = new Set<number>();
     w.__scene.children[0].traverse((o: any) => {
       if (!o.isMesh) return;
       if (o.material?.stencilWrite === true) stencilWriters++;
-      if (o.geometry?.type === 'RingGeometry') maxBrimOuterRadius = Math.max(maxBrimOuterRadius, o.geometry.parameters.outerRadius);
+      const p = o.geometry?.parameters;
+      if (o.geometry?.type === 'RingGeometry') maxBrimOuterRadius = Math.max(maxBrimOuterRadius, p.outerRadius);
+      if (p?.radialSegments) segmentCounts.add(p.radialSegments);
+      if (p?.segments) segmentCounts.add(p.segments); // Ring/CircleGeometry's own param name
     });
-    return { stencilWriters, maxBrimOuterRadius };
+    return { stencilWriters, maxBrimOuterRadius, segmentCounts: [...segmentCounts] };
   });
 
   expect(result.stencilWriters, 'one stencil-writing mouth mesh per hole, all 8 present').toBe(8);
   expect(result.maxBrimOuterRadius, 'brim is the new, small radius (2*OCC_R_m - HOLE_R_m = 0.065), not the old 0.13').toBeCloseTo(0.065, 3);
+  expect(result.segmentCounts, 'every hole geometry uses the same 32 radial segments').toEqual([32]);
 });

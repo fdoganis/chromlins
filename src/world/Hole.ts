@@ -59,12 +59,17 @@ const PIT_WALL = 0x3a3a46; // lit dark-grey wall, the rim catches light, deeper 
 // Not disposed: they live for the page lifetime, which matches the rest of the
 // codebase - Game is created once in main.ts and never torn down.
 //
-// TODO(rendering/quality, backlog, not yet done): BRIM_GEO, OCC_GEO and
-// PIT_GEO share edges at the same radii but use three different segment
-// counts (28, 24, 32-default) - not confirmed as visible, harmonizing all
-// to the same count is the likely fix next time this file changes.
-const BRIM_GEO = new RingGeometry(HOLE_R_m, BRIM_R_m, 28).rotateX(-Math.PI / 2);
-const OCC_GEO = new CylinderGeometry(OCC_R_m, OCC_R_m, OCC_DEPTH_m, 24, 1, true);
+// All four (BRIM_GEO, OCC_GEO, PIT_GEO, MOUTH_GEO below) share edges at the
+// same radii (BRIM_GEO's inner edge = HOLE_R_m = PIT_GEO's own radius =
+// MOUTH_GEO's own radius; BRIM_GEO's outer-adjacent boundary lines up with
+// OCC_GEO at OCC_R_m), so they're all harmonized to the same 32 radial
+// segments - a circle approximated with a different vertex count doesn't
+// line up exactly with another circle of the same radius approximated
+// differently, meeting edge-to-edge as polygons of different facet counts
+// instead of a true circular seam otherwise. 32 is also CylinderGeometry's
+// own default, which is why PIT_GEO below omits it entirely.
+const BRIM_GEO = new RingGeometry(HOLE_R_m, BRIM_R_m, 32).rotateX(-Math.PI / 2);
+const OCC_GEO = new CylinderGeometry(OCC_R_m, OCC_R_m, OCC_DEPTH_m, 32, 1, true);
 // PIT_GEO is closed (openEnded left at its default, false): PIT_MAT is
 // BackSide, real GPU face culling (confirmed in three's own WebGLState.js),
 // so looking down into the hole, the pit's own top cap is always the culled
@@ -84,7 +89,7 @@ const MOUTH_MAT = new MeshBasicMaterial({
   colorWrite: false, depthWrite: false, depthTest: false,
   stencilWrite: true, stencilRef: 1, stencilZPass: ReplaceStencilOp
 });
-const MOUTH_GEO = new CircleGeometry(HOLE_R_m, 24).rotateX(-Math.PI / 2); // exactly the visible opening
+const MOUTH_GEO = new CircleGeometry(HOLE_R_m, 32).rotateX(-Math.PI / 2); // exactly the visible opening
 
 const OCC_ORDER = -10; // depth laid down before the actors (default order)
 const PIT_ORDER = -5;  // dark wall fills the opening, after the occluder
