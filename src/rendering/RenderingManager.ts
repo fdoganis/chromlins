@@ -175,8 +175,10 @@ export class RenderingManager {
     // geometry it would otherwise always win the depth test and cap a hole's
     // opening with a translucent disc wherever a shadow crosses it (looks like
     // glass). Hole.ts marks each true opening's footprint in the stencil
-    // buffer; skip drawing the catcher there. Untouched everywhere else — the
-    // brim ring around a hole still shows shadows normally.
+    // buffer; skip drawing the catcher there. Untouched everywhere else, the
+    // brim ring around a hole still shows shadows normally (tried dropping
+    // this stencil cutout twice, real device testing found a real bug both
+    // times - see Hole.ts's own file comment).
     catcher.material.stencilWrite = true;
     catcher.material.stencilFunc = NotEqualStencilFunc;
     catcher.material.stencilRef = 1;
