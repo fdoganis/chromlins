@@ -11,7 +11,7 @@
     "build": "tsc && vite build",
     "preview": "vite preview",
     "clean": "rm -rf dist",
-    "purge": "npm run clean && rm -rf node_modules build/external-api.externs.js",
+    "purge": "npm run clean && rm -rf node_modules build/external-api.externs.js monocart-report test-results .measure-pack.json bundle-explorer-report.html .device-test",
     "serve": "http-server dist",
     "cloud": "cloudflared tunnel --url http://localhost:5173/",
     "zip": "node scripts/zip.mjs",
