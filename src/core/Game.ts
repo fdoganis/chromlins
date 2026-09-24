@@ -52,6 +52,10 @@ export class Game {
     const handDebug = __DEV__ && 'handdebug' in getQuery();
     const hands = [this.rendering.renderer.xr.getHand(0), this.rendering.renderer.xr.getHand(1)];
     this.#handOccluder = new HandOccluder(this.rendering.scene, hands, { debug: handDebug });
+    // Always compiled in, not __DEV__-gated: no CDN fetch, no GLTFLoader,
+    // just flipping the occluder's own material visible — cheap enough to
+    // ship so this is checkable on a real device/build, not only in dev.
+    if (getQuery().occluder === 'visible') this.#handOccluder.setDebugMaterial('visible');
     if (handDebug) {
       // Dynamic import: pulls in XRHandModelFactory + GLTFLoader (and fetches
       // the ground-truth hand model from a CDN) only when this dev flag is
