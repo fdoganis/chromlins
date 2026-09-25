@@ -1,14 +1,18 @@
 import { test, expect } from './fixtures';
 import * as path from 'node:path';
 
-// Not a test of shipped behavior — Hole.ts is unchanged by this file. This is
-// a live comparison tool for a specific proposal on the table: replace
-// Hole.ts's 5-piece occluder (brim + crown + base, all colorWrite:false,
-// plus the visible pit + floor) with 2 pieces — one visible inner cylinder,
-// one "tight and deep" invisible outer cylinder, no separate rim or bottom
-// cap. It builds the alternative live, via reflection off classes already in
-// the scene (no source changes to Hole.ts), and screenshots both states so a
-// visual regression is something to look at, not just reason about.
+// Not a test of shipped behavior — Hole.ts is unchanged by this file. Written
+// while Hole.ts still had its original 5-piece occluder (brim + crown + base,
+// all colorWrite:false, plus a separate visible pit + floor); Hole.ts has
+// since shipped its own simplification down to 4 pieces (brim + occluder +
+// pit + a stencil mouth, see its own file comment). This test explores going
+// further still, to 2 pieces — one visible inner cylinder, one "tight and
+// deep" invisible outer cylinder, no separate rim, bottom cap, or stencil. It
+// builds that more aggressive alternative live, via reflection off classes
+// already in the scene (no source changes to Hole.ts), and screenshots both
+// states so a visual regression is something to look at, not just reason
+// about. Not adopted — Hole.ts's real shipped design needed the stencil
+// mouth this alternative drops (see Hole.ts's own file comment for why).
 //
 // Findings so far, both real and worth keeping visible here:
 //   1. "tight" must NOT mean the same radius as the visible inner cylinder

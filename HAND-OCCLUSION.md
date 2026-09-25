@@ -168,14 +168,15 @@ plain-Node testable with zero extensionless imports, which is exactly what
 broke (loudly, in the unit test suite) the one time this session tried
 importing the shared one into it.
 
-**Where this leaves the budget:** shipped, this is still **64 B over** the
-13,312 B limit in aggressive mode (13,376 B), and 475 B over in default mode.
-That 64 B is the real number to answer "how many bytes do we need to find" —
-down from 318 B for the original, un-ablated design, but not yet closed. The
-debug-mode extra (joint spheres + `handOcclusionDebug.ts`) is **not** included
-in any of these numbers: it's gated behind `__DEV__ && 'handdebug' in query`,
-so it tree-shakes to nothing in a production build regardless of whether this
-feature ships.
+**Where this left the budget, at the time this feature alone was measured:**
+64 B over the 13,312 B limit in aggressive mode (13,376 B), down from 318 B
+for the original, un-ablated design. Since then, unrelated work (Hole.ts's own
+occluder simplification) shipped and moved the total — see `.doc/SIZE-AUDIT.md`
+for the current, authoritative number; don't trust either figure in this
+section as still current. The debug-mode extra (joint spheres +
+`handOcclusionDebug.ts`) is **not** included in any of these numbers: it's
+gated behind `__DEV__ && 'handdebug' in query`, so it tree-shakes to nothing
+in a production build regardless of whether this feature ships.
 
 ## Automated testing — built and run
 
@@ -315,17 +316,17 @@ question above settled first, or it will just be gamed by that one segment.
   behind a real hand's depth and read as clipped or missing. Not built,
   not measured.
 
-## Where else could those 64 B come from?
+## Where else could more bytes come from?
 
 Not chased further in this spike (out of scope for a hand-occlusion doc), but
 worth naming since they're the obvious next places to look, roughly in order
 of expected size: `pack:aggressive` itself already trims ~370 B by letting
 Closure rename/delete our own dead code — if this ships, re-running
-`npm run deadcode` (README documents it; **it doesn't currently exist as an
-npm script**, a pre-existing doc/reality mismatch worth fixing separately)
-would be the natural next lever, followed by the same kind of one-change
-ablation done here applied to the rest of the audio/state code, not just this
-feature.
+`npm run deadcode` (restored on `spike/deadcode-tool` after being tried,
+reviewed, and quietly lost on an unmerged branch — see that branch's own
+commit for the story) would be the natural next lever, followed by the same
+kind of one-change ablation done here applied to the rest of the audio/state
+code, not just this feature.
 
 ## Recommendation
 
@@ -333,8 +334,9 @@ Ship this shape if the feature ships at all: the ablation above is
 unambiguous (every change was smaller **and** measurably more accurate, never
 a trade-off), it needs no WebXR features Quest doesn't already grant this
 game, and it now has a repeatable, automated regression test with real
-screenshots. Before shipping: close the remaining 64 B (aggressive mode),
-verify on a real device that occlusion actually looks right against real
+screenshots. Before shipping: check the current budget against
+`.doc/SIZE-AUDIT.md` (this feature's own 64 B gap has since moved, see "Byte
+cost" above), verify on a real device that occlusion actually looks right against real
 passthrough (not just against a reference mesh), and weigh it against the
 other two byte-budget options (light estimation, the bitmap font) — this is
 the one with a verified, working effect on the *thing this game is actually
