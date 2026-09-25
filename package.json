@@ -21,6 +21,7 @@
     "lsgit": "git ls-files | sed 's|^|https://github.com/fdoganis/chromlins/blob/main/|'",
     "file-sizes": "node scripts/file-sizes.mjs",
     "find-uncalled-methods": "node scripts/find-uncalled-methods.mjs",
+    "deadcode": "node scripts/deadcode.mjs",
     "knip": "knip",
     "bundle-explorer": "node scripts/bundle-explorer.mjs",
     "measure-pack": "node scripts/measure-pack.mjs",

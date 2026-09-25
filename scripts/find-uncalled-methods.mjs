@@ -16,10 +16,10 @@
 //     specific class's version never actually runs. Small, cohesive files
 //     make this less likely to hide something; a big shared vocabulary
 //     (`update`, `dispose`, `reset`) makes it more likely.
-// A type-aware tool (e.g. `knip`, or `ts-morph`'s real "find references")
-// would not have either problem, at the cost of a new dependency — worth it
-// if this starts turning up real candidates often; a plain grep is enough to
-// have found the whole dispose() chain by hand this session.
+// `npm run deadcode` (scripts/deadcode.mjs) has neither problem — it uses
+// the TypeScript checker already in devDependencies for `tsc`, no new
+// dependency — but costs a full program build to run. This script stays for
+// a zero-setup, instant first pass.
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
 
