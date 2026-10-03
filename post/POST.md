@@ -42,7 +42,7 @@ Last year, for my first entry ever, CLAWZ, I clearly understimated the amount of
 
 Given my background, I wanted to create **a game that uses the real world**. I also wanted to make players move, use their body to play, and give them agency. 
 
-But I also know that [cognitive overload can be a real issue in XR](https://www.frontiersin.org/journals/virtual-reality/articles/10.3389/frvir.2026.1874509/full). Many users struggle to adjust to novel immersive interaction paradigms, so **the experience needs to be kept as simple as possible**. But also fun (it's a game!), and original: I'm a researcher at heart, I don't enjoy cloning something that already exists as much as combining ideas and imagining new ways to **combine real and virtual worlds**.
+But I also know that [cognitive overload can be a real issue in XR](https://www.frontiersin.org/journals/virtual-reality/articles/10.3389/frvir.2026.1874509/full). Many users struggle to adjust to novel immersive interaction paradigms, so **the experience needs to be kept as simple as possible**. But also fun (it's a game!), and original: I'm a researcher at heart, I don't enjoy cloning something that already exists as much as blending ideas and imagining new ways to **combine real and virtual worlds**.
 
 # The original idea
 
@@ -87,7 +87,7 @@ So, let's build an AR whack-a-mole game!
 
 I want to hate TypeScript: it seems to introduce an ever growing number of concepts and incompatibilities with every release, and tries to divert JavaScript from its original intent, as the main native language of the Web. But I have been avoiding it for too long. 
 
-If you're doing serious web development, you should give it a try: compile time type checking, automatic  documentation and autocompletion are priceless, but so are less known features it allows, like advanced tree-shaling Dead Code Elimination (DCE), as we'll see later.
+If you're doing serious web development, you should give it a try: compile time type checking, automatic  documentation and autocompletion are priceless, but so are less known features it allows, like advanced tree-shaking and Dead Code Elimination (DCE), as we'll see later.
 
 <div style="text-align: center;">
 <p><a href="https://commons.wikimedia.org/wiki/File:Typescript.svg#/media/File:Typescript.svg"><img src="https://upload.wikimedia.org/wikipedia/commons/f/f5/Typescript.svg?utm_source=en.wikipedia.org&amp;utm_campaign=imageinfo&amp;utm_content=original" alt="Typescript.svg" height="260" width="260"></a><br></p>
@@ -101,7 +101,7 @@ Maybe I'm fooling myself, but I believe that this should make TypeScript impact 
 
 In the WebXR category your game still needs to weigh only 13KB zipped, but you can use one of the proposed libraries for free! This year you could choose from [A-Frame](https://github.com/aframevr/aframe/releases/tag/v1.8.0), [Babylon.js](https://github.com/BabylonJS/Babylon.js/releases/tag/9.20.0), [PlayCanvas](https://github.com/playcanvas/engine/releases/tag/v2.21.3) and [THREE.js](https://github.com/mrdoob/three.js/releases/tag/r185).
 
-There have been many advances in most of these 3D libraries, but I know THREE.js better than all the alternatives, I know its quirks, and there are many examples to draw inspiration from. Here's a mesmerizing example, [Chill the Lion](https://moments.epic.net/#lion), made using THREE.js by the amazing [Karim Maaloul](https://yakudoo.com):
+There have been many advances in most of these 3D libraries, but I know THREE.js better than all the alternatives, I know its quirks, how to optimize it, and there are many examples to draw inspiration from. Here's a mesmerizing example, [Chill the Lion](https://moments.epic.net/#lion), made using THREE.js by the amazing [Karim Maaloul](https://yakudoo.com):
 
 ![Chill the Lion by Karim Maaloul](./images/moments-of-happiness-lion.gif)
 
@@ -116,7 +116,7 @@ I love software architecture as well as working with constraints to create **cle
 
 That didn't end up well in [my previous JS13K attempt](https://js13kgames.com/2025/games/clawz): almost all the code was inside a unique file that got messier with each iteration. Adding features and bug fixes under time pressure just made things worse: the code was not manageable, and I wasted precious hours fighting the mess instead of polishing the game, which runs, but is no fun at all given all the missing functionality.
 
-Surely there should be a way to keep design as cleanly as possible while keeping byte count low.
+Surely there should be a way to keep designing as cleanly as possible while keeping byte count low.
 
 I decided to start with the best design practices that I could find: [Game Programming Patterns](https://www.gameprogrammingpatterns.com) was very inspiring for the core of my code. GameLoop, Input, States, are all essential! [Refactoring Guru](https://refactoring.guru/design-patterns) was interesting too, as a more readable alternative to the original [Design Patterns Book](https://en.wikipedia.org/wiki/Design_Patterns), which is still a reference today, despite its age and writing style.
 
@@ -155,9 +155,9 @@ The modular architecture that I used allowed me to swap a component for another.
 
 ## The Gamma Engine
 
-After all this design work, I still didn't have a game, just an engine. I named it [Gamma](https://github.com/fdoganis/gamma), for "GAMe Modular Architecture, or just because it's Greek letter thqt sounds the most like "Game". It's the word that I came up with when I needed to create the repo. 
+After all this design work, I still didn't have a game, just an engine. I named it [Gamma](https://github.com/fdoganis/gamma), for "GAMe Modular Architecture, or just because it is the Greek letter which sounds the most like "Game". Or maybe because the first author of the original [Design Patterns book](https://en.wikipedia.org/wiki/Design_Patterns) that was lying on my desk is [Erich Gamma](https://en.wikipedia.org/wiki/Erich_Gamma)? Whatever the reason, it is the word that I came up with when I needed to create the repo. 
 
-I decided to release it under the MIT license for anyone to use, hopefully saving some time and allowing more people (including my future self) to make more XR games, faster. The repo needs some cleanup, and my coding and design choices might not be suitable for everyone, but I hope it will help someone out there the way that all the tools, libraries and examples have helped me in my journey.
+I decided to release it under the MIT license for anyone to use, hopefully saving some time and allowing more people (including my future self) to make more XR games, faster. The repo needs some cleanup, and my coding and design choices might not be suitable for everyone, but I hope it will help someone out there the way that all the existing tools, libraries and examples have helped me in my journey.
 
 Now let's build the game!
 
@@ -165,11 +165,11 @@ Now let's build the game!
 
 ## States and Levels
 
-The starting process before playing a WebXR game can be tedious: due to security constraints the user needs to **click on a button** before the page is allowed to switch to an immersive mode. The position of the headset at that moment is the default **origin of the virtual world,** which is quite inconvenient. 
+The initial setup before playing a WebXR game can be tedious: due to security constraints the user needs to **click on a button** before the page is allowed to switch to an immersive mode. The position of the headset at that moment is the default **origin of the virtual world,** which is quite unconvenient. 
 
-From what I have experienced, a simple XR pattern is to let the user define a playing area using a cursor that follows flat surfaces on the real world. This sets the origin of the game. In this case, it places the Gameboard. 
+From what I have experienced, a simple yet efficient XR UX pattern is to let the user define a playing area using a cursor that follows flat surfaces on the real world. This sets the origin of the game. In this case, it places the Gameboard. 
 
-Each of these setup steps (Start, Place, Run) is defined as a State of the Game, for clarity, instead of having a massive if / else  switch for all possible modes. Level definitions are simpler, as they are mostly configured variables to increase difficulty.
+Each one of these setup steps (Start, Place, Run) is defined as a State of the Game, for clarity, instead of having a massive if / else  switch for all possible modes. Level definitions are simpler, as they are mostly configured variables to increase difficulty.
 
 ## The Gameboard
 
@@ -189,9 +189,9 @@ Oh and that scheme is very close to the one used in [Goemon Fight's whack-a-mole
 
 Designing holes in AR is far from trivial, so I created one for you, if you ever need to create a game of golf for example. The difficulty comes from the fact that you need to draw a deep hole (not just a disk, here you can peek inside the hole), but that hole should not be visible from the sides.
 
-Imagine a top hat (a magician's hat?), upside down (the hole is upwards). The interior of the hat is an open cylinder (or a closed one where only the back faces are rendered) and the exterior is another cylinder + rim, where only depth is rendered, no color, therefore acting as an occluded of the sides of the hole.
+Imagine a top hat (a magician's hat?), upside down (the hole is upwards). The interior of the hat is an open cylinder (or a closed one where only the back faces are rendered) and the exterior is another cylinder + rim, where only depth is rendered, no color, therefore acting as an occluder for the sides of the hole.
 
-I drew some inspiration from the excellent [examples by Lee Stemkoski](https://stemkoski.github.io/AR-Examples/), but used an external cylinder as the external occluder shell instead of a plane.
+I drew some inspiration from the excellent [examples by Lee Stemkoski](https://stemkoski.github.io/AR-Examples/), but used an external cylinder as the external occluder shell instead of a plane. 
 
 <div style="text-align: center;">
   <img src="https://stemkoski.github.io/AR-Examples/images/demo/hole-ring.png" alt="Virtual hole on a real table" style="display: block; margin: 0 auto;">
@@ -199,6 +199,7 @@ I drew some inspiration from the excellent [examples by Lee Stemkoski](https://s
 
 
 
+If you look at the code you'll notice quite a few more tricks to make the hole look as natural as possible in an AR context, while keeping its byte coste low: a closed, filled cylinder with only back faces drawn, surrounded by a slightly wider and much longer open occluding cylinder (to avoid z-fighting), an occluding disk to mask the gap between the two cylinders and some tricks (disk and stencil buffer) to render AR shadows properly.
 
 
 ## AR Shadows
@@ -212,7 +213,7 @@ Adding shadows [grounds your virtual world on the real one](https://medium.com/s
 
 <br>
 
-Ideally, I should have also used light pose estimation when available, for extra realism.
+Ideally, I should have also used light pose estimation when available, for extra realism. But this feature is mostly available on mobile phones so far, which was not my primary target so I kept it out to save bytes.
 
 In *Chromlins*, there is an invisible shadow catching plane, but one difficulty was to avoid the shadow to be cast on the surface on top of the holes. Some stencil magic has been used to solve this issue but there are probably some simpler solutions.
 
@@ -222,29 +223,44 @@ In *Chromlins*, there is an invisible shadow catching plane, but one difficulty 
 
 One month to create a complete game is definitely challenging, especially when you can only code at night and during the week-ends. That leaves you about at most 8 days to complete everything. 
 
-That's why I tried to identify all year long the components that could be useful for the game. I thought that I could create a standard game and then adjust it once the theme would be announced. I really wanted to create this whack-a-mole game, but when the theme was announced I was caught off guard. How on Earth would I make a game about unicorns and rainbows?
+That's why I tried to identify all year long the components that could be useful for the game. I thought that I could create a standard game and then adjust it once the theme would be revealed. I really wanted to create this whack-a-mole game, but when the theme was announced I was caught off guard. How on Earth would I make a game about unicorns and rainbows?
 
-At first I considered having moles that you would have to hit, and unicorns that you would have to save by drawing a rainbow to create a bridge or ladder out of their whole. Or maybe just grab them by their horn to pull them out and back on the rainbow. 
+At first I considered having moles that you would have to hit, and unicorns that you would have to save by drawing a rainbow to create a bridge or ladder out of their hole. Or maybe just grab them by their horn to pull them out and back on the rainbow. 
 
 And then I remembered that I needed to **keep things as simple and basic as possible**. Combining many different movements would increase complexity without adding any fun. I needed to focus on taps. 
 
-Before the theme was announced I had in mind that some moles could be holding dynamites, bombs, or mines that should not be tapped. But we should not tap the unicorn, we should save it! Wait, its horn hurts you if you try and tap it! Perfect! Just tap everything apart from the unicorn.
+Before the theme was announced I had in mind that some moles could be holding dynamites, bombs, or mines that should not be tapped. And we don't want to tap the unicorn, we should save it instead! Wait, its horn hurts you if you try to tap it! Perfect! **Just tap everything apart from the unicorn**.
 
 A feature that I wanted to implement is that if you hit a unicorn your hand gets injured and you can no longer use it until the end of the level. But again, I wanted to keep things as simple as possible, so I dropped the idea.
 
 ## The characters
 
-For the look of the characters, I was of course inspired by the many retro games of my early years. Pac-Man for the Chromlins, the score and the font, Bubble Bobble, and Final Fantasy's Mog for the look of the Unicorn.
+For the look of the characters, I was of course inspired by the many retro games of my early years. Pac-Man for the Chromlins, the score and the font, Google's fantastic [Blob Opera](https://artsandculture.google.com/experiment/blob-opera/AAHWrq360NcGbw?hl=en), Bubble Bobble, and Final Fantasy's Mog for the look of the Unicorn.
+
+
+![](/post/images/ghosts_pac-man.png)
+
+![](/post/images/hero-blob-opera-gif.gif)
+
+![](/post/images/bubble_bobble.jpg)
+
+![](/post/images/MoogleFFIXConcept.png)
+
 
 I wanted characters to be as expressive as possible, and tried many crazy ideas but finally just kept **subtle animations for the eyes and the mane**. Most importantly I made the characters look at you: **eye contact in XR makes them feel alive** (as I have experienced in many XR games and experiences).
 
-Regarding the plot, Rainbow Brite was probably an influence, with evil characters stealing the colors of the rainbow. At some point I wanted to render the whole real scene in grey and restore colors progressively. But I did not have the time to test if that would actually look good.
+Regarding the plot, [Rainbow Brite](https://en.wikipedia.org/wiki/Rainbow_Brite_(1984_TV_series)) was probably an influence, with evil characters stealing the colors of the rainbow.
+
+![](/post/images/Rainbow_Brite.jpg)
+
+At some point I wanted to render the whole real scene in grey and restore colors progressively. But I did not have the time to test if that would actually look good.
+
 
 ### "Chromlins" ???
 
 So we had these gnomes, goblins, spirits stealing colors. How about some kinds of vampires sucking colors? Or how about just eyes, floating around, and attaching to colors to capture them and bury them under ground? Again the Pac-Man ghosts were surely an inspiration there. 
 
-So what should these color thirsty goblin thieves be called? Chromlins! Like Chroma + Goblins. And it sounds a bit like the mischievous Gremlins. Great!
+So what should these color thirsty goblin thieves be called? **Chromlins**! Like Chroma + Goblins. And it sounds a bit like the mischievous Gremlins. Great!
 
  Alternative names that I had in mind: "SUTRa: Somewhere Under The Rainbow", or "PAF la Licorne" (as suggested by my wife) but both sounded like private jokes, and the clock was ticking! Hence Chromlins!
 
@@ -252,7 +268,7 @@ So what should these color thirsty goblin thieves be called? Chromlins! Like Chr
 
 The unicorn is unique and should be treated with care. It should look great! 
 
-At first it was just a white Chromlin with a pink horn and huge black eyes. It didn't look like a unicorn. 
+At first it was just a white Chromlin with a pink horn and huge black eyes. It didn't look like a unicorn at all!
 
 <div style="text-align: center;">
   <img src="./images/unicorn_1.jpg" alt="unicorn v1" style="display: block; margin: 0 auto;">
@@ -301,7 +317,10 @@ My mental health was questioned, but I was truly excited by the idea that I coul
 <br>
 
 
-And using a url parameter I could test it in-game! And so can you! 
+And using a url parameter I could test it in-game! And so can you by following the link below!
+
+https://fdoganis.github.io/gamma/groom.html
+
 
 Unfortunately I had to remove this functionality from the official build but I will definitely bring it back. I wanted all players to be able to share their score, name and unicorn.
 
@@ -345,7 +364,7 @@ I started creating a small animation without words to explain this scenario but 
 
 ## Gameplay
 
-You can either smash Chromlins with your palms or aim at them by pinching or hitting a trigger to cast a ray. 
+You can either **smash Chromlins with your palms** or **aim at them **by pinching or hitting a trigger to cast a ray. 
 
 The ray is not visible but you can see its effect, like a bullet. It either hits a target or misses, in which case you see a small amount of white particles on the location of the hit:
 
@@ -360,7 +379,7 @@ The ray is not visible but you can see its effect, like a bullet. It either hits
 
 But while you can spam rays, indefinitely, you might miss your shot leading to a streak counter reset (during a streak hits increase along the pattern +100, +200, +300 etc. instead of +100 for each hit), or worse you might end up hitting a unicorn, and lose points and color from the rainbow!
 
-I should probably add more juice here with letters like "COMBO" and "STREAK".
+I should probably add more juice here with text like "COMBO" and "STREAK".
 
 Also, the hands should occlude the virtual scene properly. I tried activating depth sensing but the results looked way too pixelated on the Meta Quest 3. I will see if I can create an occluding hand-like geometry that fits in a few bytes.
 
@@ -374,18 +393,20 @@ The Chromlin will change color and the letter will freeze. If you miss the lette
 
 Once you have added your 3 letters, a last Chromlin will appear with "OK" displayed on it. Hit it to confirm your entry!
 
-Secret tip to thank you for reading this far: try entering "13K" as a name and see what happens!
+**Secret tip** to thank you for reading this far: try entering "**13K**" as a name and see what happens!
 
 
 # Text
 
 Typography is beautiful. 
 Immersive typography is even prettier.
-I wanted text that looks solid, instead of flat panels. But in 13K using a font like the THREE.js ttf loader was not an option.
+I wanted text that looks solid, instead of flat panels. But in 13K using a font like the [THREE.js ttf loader](https://threejs.org/examples/?q=ttf#webgl_loader_ttf) was not an option.
 
-I thought of many alternatives, including a pretty cool digital stopwatch inspired segmented display. You can find these in the text folder and you can configure the modular Gamma engine to choose the one that suits your game best.
+![](/post/images/webgl_loader_ttf.jpg)
 
-My favorite so far: use LittleJS beautiful pixel font, all caps only to save space, by converting every pixel of each character into a 3D cube. This can be seen in the official trailer, but due to size constraints I had to resort to the cheapest alternative: render the text as a canvas, sample it, and recreate cubes for every pixel. This path still needs optimization (I'd like to precompute a complete PNG file instead of rasterizing from scratch every time I need some text) but it works so far.
+I considered many alternatives, including a pretty cool digital stopwatch-inspired segmented display. You can find these in the text folder and you can configure the modular **Gamma** engine to choose the one that suits your game best.
+
+My favorite so far: use LittleJS beautiful pixel font, all caps only to save space, by converting every pixel of each character into a 3D cube. This can be seen in the official trailer, but due to size constraints I had to resort to the cheapest alternative: render the text as a canvas, sample it, and recreate cubes for every pixel. This path still needs optimization (I'd like to precompute a complete high resolution PNG atlas file instead of rasterizing from scratch every time I need some text) but it works so far.
 
 I have many other crazy text ideas, I'll see if I can implement them in the future. In any case, adding text to your game is invaluable: it provides guidance, instructions, feedback to the player, it reduces the need to read an instruction manual, and smoothes the onboarding process. It can also be used for debugging, like a fancy immersive console.log()!
 
@@ -409,7 +430,11 @@ I came up with some nice tunes, but they were a bit too repetitive. I was wonder
 
 ### The theory
 
-Discussing with a very good friend of mine who happens to be both an engineer and a [musician](https://www.french-metal.com/chroniques/asylumpyre.html), I realized the importance of chord progressions.
+Discussing with "JAE" a very good friend of mine (pictured below) who happens to be both an engineer and a [musician](https://www.french-metal.com/chroniques/asylumpyre.html), I realized the importance of chord progressions.
+
+
+![](/post/images/IMG_4126.jpeg)
+
 
 I am more of a visual person so a comparison for me would probably be like composing an illustration: finding the right balance between geometrical shapes and colors. 
 
@@ -423,7 +448,7 @@ I did not want to use Suno or similar services, creating generic music with low 
 
 So I wondered: what would be the closest equivalent to Markdown for music notation, a format that both humans, computers and LLMs might understand and edit easily? I saw that there was the way too verbose [MusicXML](https://fr.wikipedia.org/wiki/MusicXML), and also [LilyPond](http://lilypondcss.s3-website-us-east-1.amazonaws.com/Documentation/notation/writing-rhythms.fr.html), which seemed powerful but not very intuitive for me . 
 
-Then I discovered and fell in love with [ABC notation](https://en.wikipedia.org/wiki/ABC_notation). To me it really looks like Markdown for music: it gives you a very compact yet readable notation for pitch, duration, voices, bars, patterns, volume, speed, and you can even assign MIDI instruments. The ecosystem is very rich and you can convert an ABC file to MIDI, MP3, WAV or even render it as a beautiful PDF score. I was sold.
+Then I discovered and fell in love with [ABC notation](https://en.wikipedia.org/wiki/ABC_notation). To me it really looks like Markdown for music: it gives you a very compact yet readable notation for pitch, duration, voices, bars, patterns, volume, speed, and you can even assign MIDI instruments. The ecosystem is very rich and you can convert an ABC file to MIDI, MP3, WAV or even render it as a beautiful PDF score thanks to fantastic tools such as the ones [created by Michael Eskin](https://michaeleskin.com/abctools/abctools.html). I was sold.
 
 I considered using existing Public Domain tunes, but none were sounding like a video game.
 
@@ -431,20 +456,27 @@ I considered using existing Public Domain tunes, but none were sounding like a v
 
 I tried experimenting with AI. The tunes generated by default were far from great. They were dull, repetitive. It took a lot of prompting and skill crafting to make AIs produce something original yet good sounding.
 
-I made at least 13 attempts before creating the music for "Chromlins".
+I made at least 13 attempts before creating the music for "Chromlins". Here is one of them.
 
-I would say that at first, the final tune was a "happy accident", while I was trying create some music for an F Zero / Wipeout racer (and I'm glad I didn't create that game, since the phenomenal Frank Force seems to have coded it for JS13K this year!).
+<video controls width="300" height="200">
+  <source src="/post//audio//chromlins_music_tentative.mp3" type="audio/mpeg">
+  Your browser does not support the video tag.
+</video>
+
+I would say that at first, the final tune was a "happy accident", while I was trying create some music for an F Zero / Wipeout racer (and I'm glad I didn't create that game, since the phenomenal [Frank Force seems to have coded it for JS13K this year](https://js13kgames.com/2026/games/sp13ktra)!).
 
  The goofiness of the resulting music didn't fit at all my original idea SciFi racer idea, but the tune was very engaging so I decided to keep exploring, fixing, guiding, until I was happy with the result.
 
+
 Is this generative AI? Yes. Is it low effort? Far from it. Is it original, memorable? I believe so, therefore I think it is worth keeping it.
 
-Alternatives would have been to use my less engaging hand-made tune, or to use one of the brilliant sound generators like zzfx-studio and voxby. But I wanted some creative control, and although I do love these generators, they sometimes feel even more low-effort and slot-machine like to use than resorting to AI. 
+Alternatives would have been to use my less engaging hand-made tune, or to use one of the brilliant sound generators like [zzfx-studio](https://tjw.dev/zzfx-studio/) and [voxby](https://ryanbmalm.com/voxby/). But I wanted some creative control, and although I do love these generators, they sometimes feel even more low-effort and slot-machine like to use than resorting to AI. 
 
 Of course, I could, and probably should, have made a collab with a real musician, but I wasn't confident enough that I would be able to finish the game in time in the first place. And I don't know many people who would have enjoyed creating such a whacky tune!
 
 [Here it is](https://sb.bitsnbites.eu/?data=U0JveA4C7ZpLaxxHEMf_PbM7imTJer-ID5JNwDfnkmNOISGXnAI5RAEfDDYOsmxZj8gKsjtC7GZtS2xWkRYtQkE2dow_QXJKECGfwOCv4W9gV79Wu6MYhOiScajfUFMzveI_PdU9XVO7-ucs8BH6OtTfGuqv-U4gGzkP4vNUqdHfMfFVNp6Zc5WoVCWFYtbxQWfXme7OnrO9fT39A52DQ4PDg0Mjo2PjddSwhTr9bcPu47Nrlc01agzqv9j-11DFBh4w6DfIdshMbLYY7oAn5kf1G0z6O81R5iHo_sakv8cc_9Dvx0z6j7x_wqT_xF9jj2mMXVz2aeMZi30_yntMz8Cu7_c-0xg_JXtG9pz1-WrY2HCsRVtet8E0f-rWGj7HxF-fTV6p2hxTZclf-9Yes60P7fkrPjUbI2Cd7D7L-B5m9wpK0fU53hkEQRCOxZQGLutuoBtf-qbkNTDxdbpaMCe5Es5UcH1kxf6B_sH-gaHhkVGzhLllzO03vIV9zVvYbyGkguMmhFZ15NSRU8eJ1B-06G-03YMp8VyKqfrzX1vsuPoVsjJZyeuut7SHFBbaTb83W9qPFx3kooNcdE5Oma6wQSqbNgmWo8_ACt11ldTNK866jUhc7nv9basf_yXBRcd9wcDxJcBD2_s6vUZt0tHD6PohOk5_Pbp-yY9AzUa_xKjPNb5lGtdy08ePf4V6Xmn62Jg5WbOz1Pn48XHPANcr8hpWyUqkvcagHvJRne2rsPx6H3_-mxgBP5HdZdB3o2pG4R5WsBxd_17ufPU_7k8QBEE4SnqgkfyrMyrhuidNw6cFldz4pmPiVvpZ4so3RS3NCi6UcNlhCTdnF-E52haxxLDEH-rPYgbT0fVv4kdSXsFtlgRoen6D9qbf39MxWOJj-m_uY4Yl_ryYfi-SBR8bE5slsuBjY-bNElnwHOO7TBZ8bOahKfa66WOzQC-XN8mCj42Z8wtkwcefn-1b_PnZvsWfP-0bx_pg1v5Fv0LHZprWzWnSnbX7-Mxam2Nb5xbtM-DiNMugPwOXXa6TXWXQd4XbEtv4XoMgCIJwIi7d6UFpVeEK8N0fKVAAkvIVNQUoKKWSlIy8KhDkimmagqxIx-ZzZM2XPs3UQ31KkWDrP9Hq2fSZ7iDo6lMbCUEQBEEQBEEQ3srHugulcmpKuG__9G1rlzFlvHLlG1kaSrjQhmAGnbPYcGqjRZdL_7SuIQiCIAiCIAjC_56Dn8-rMZ1NzhSTL15B4YJCMv_ywx9gK7jDEs5T8G3hV7gstSraq2mmXuqmaSZ93eaj63P_Usb0C1_QbiIPjCAIgiAIgiC8Y3RXYuqKF8XeT865FrUNXAwfq9yf-1IuoUNXvSl9mp1lKIE05J8EBUEQBEEQBEF4P3gD) in all its glory.
 
+![](/post/images/chromlins_score.jpg)
 
 
 ## SFX
@@ -476,20 +508,21 @@ You will feel some vibrations every time you hit a Chromlin! Install the app and
 
 # Coding in the age of AI
 
-**DISCLAIMER**: What follows was initially supposed to be a disclaimer on my usage of AI in this jam, but ended up more like a rant or even a dump of my personal thoughs about AI at the time of writing. Feel free to skip this section if you are fed up with reading stuff about AI. Go out and take *Chromlins* with you, enjoy life, touch grass, have fun!
+**DISCLAIMER**: What follows was initially supposed to be a disclaimer on my usage of AI in this jam, but ended up more like a rant or even a dump of my personal thoughts about AI at the time of writing. Feel free to skip this section if you are fed up with reading stuff about AI. Go out and take *Chromlins* with you, enjoy life, touch grass, have fun!
 
 ## AI: a necessary evil?
 
 AI is the elephant in the room. 
-It is everywhere, to a point that it has become almos tunavoidable.
+It is everywhere, to a point that it has become almost unavoidable.
+Even web search engines now provide you their results inside an AI chat window most of the time.
 
-There are many understandable fears related to AI. People fear that AI will make them lose their jobs, ruin the environment and that it will eventually destroy humanity. All this fear is very understandable and some of these dangers are plausible.
+There are many fears related to AI. People fear that AI will make them lose their jobs, ruin the environment and that it will eventually destroy humanity. All these fears are very understandable and some of these dangers are plausible.
 
 What is certain, and also worrying, yet to a lesser extent, is that AI has absorbed all human knowledge without consent, without proper credit, without retribution. People are talking about massive IP laundering, or even IP theft. I therefore have mixed feelings about this technology. I would love to have a green, frugal, powerful and local AI, sandboxed, tuned to my needs, and trained only on clean data. Yet here we are.
 
-AI is definitely a revolution for software development, akin to the industrial revolution for manufactured goods or the massive introduction of cheap plastic packaging. We see that despite all the benefits of this novel material, we are now dealing with plastic pollution, and we can't go back, just the way AI has polluted the internet with slop.
+AI is definitely a revolution for software development, akin to the industrial revolution for manufactured goods or the massive introduction of cheap plastic packaging. We see that despite all the benefits of this innovative material, we are now dealing with plastic pollution, and we can't go back, just the way AI seems to have polluted the internet with slop.
 
-AI is an extremely powerful tool which can be used for both good (drug discovery) and evil (bio weapon design) and should therefore be handled with care. Let's put aside all the AI induced anxiety and let's focus back on the question of creativity.
+AI is an extremely powerful tool which can be used for both good (drug discovery) and evil (bio weapon design) and should therefore be handled with care. Let's put aside all the AI induced anxiety for a moment and let's focus back on the question of creativity.
 
 ## A creativity booster?
 
@@ -497,19 +530,19 @@ This project started as a fork of my WebXR js13k repo: [three_vite_xr_ts](https:
 
 Personally I am still trying to figure out how AI should and should not be used in the context of software development and creativity. And I would like to share my journey with AI as a developer and creative coder.
 
-I believe that low-effort AI / mindless slop generation should be avoided. However creative iterations, explorations and discovery, and of course learning with AI should not be dismissed. If you consider AI as a co-worker, as a virtual member of your team, or, more abstractly, as a super compiler and search engine with a human-like UX, to push your personal ideas faster and further, I think it does wonders to productivity and it opens a door to many new possibilities.
+I believe that low-effort AI / mindless slop generation should be avoided. However creative iterations, intentional explorations and discovery, and of course learning with AI should not be dismissed. If you consider AI as a co-worker, as a virtual member of your team, or, more abstractly, as a super compiler and search engine with a human-like UX, to push your personal ideas faster and further, I think it does wonders to productivity and it opens a door to many new possibilities.
 
 ## New Horizons 
 
 Here are a few paradigm shifts enabled by AI:
 
-- bug-free code: just like grammar mistakes seem to have disappeared from most LinkedIn posts, code now compiles and passes tests from the start
+- bug-free code: just like grammar mistakes seem to have disappeared from most LinkedIn posts, code now compiles and passes tests from the start.
 
-- more relaxing iterations: even if the code is able to run without errors, if the result is not what you expect you know that you should be able to get there eventually, in a matter of hours, not days
+- more relaxing iterations: even if the code is able to run without errors, if the result is not what you expect, you know that you should be able to get there eventually, in a matter of hours instead of days.
 
 - helping you in domains that you don't master: I love designing art manually, as well as writing (this whole post is 100% AI-free!), and I wish I were a great music composer, which I am not (yet?). I do know music theory and I believe that sampling, like collage, and curation is a form of art and an expression of taste. AI helped me a lot in exploring new musical ideas.
 
-Keep in minf that AI can lead to uniformity, dullness, generic art and mediocre code. There are no outliers here, if you want original ideas you have to push the AI further, and get it out of its comfort zone and over confident tone. 
+Keep in mind that AI can lead to uniformity, dullness, generic art and mediocre code. There are no outliers here, if you want original ideas you have to push the AI further, and get it out of its comfort zone and over confident tone. 
  
 ## The end of developers?
 
@@ -519,20 +552,20 @@ After many years of software engineering and coding, I remember the early pre WW
 
 As the web expanded, coding examples could be found online. You no longer had to copy lines by hand like some pre Gutenberg era monk but could find bits or code or entire libraries that you could reuse, with the author's permission in exchange of  proper credit. 
 
-Then as sites like StackOverflow grew in popularity, you were almost assured to find the answer to your common questions by checking the highest rated comments. Of course it still required a lot of judgment to see if the most voted answer was actually correct (spoiler: that's not always the case!) and if it would work in your specific case, but such sites did turn most software developers as people handling existing software bricks and gluing them together as consistently as possible.
+Then as sites like StackOverflow grew in popularity, you were almost assured to find the answer to your common questions by checking the highest rated comments. Of course it still required a lot of judgment to see if the most voted answer was actually correct (spoiler: that's not always the case!) and if it would work in your specific case, but such sites did turn most software developers into people handling existing software bricks and glueing them together as consistently as possible.
 
-Now that AI is able to search for bricks and glue them together for you, what's left? Well, direction, structure, domain knowledge. As confident as an AI might sound, you are the one with the project vision, you can make it follow your rules, architecture, style, and taste. And your expertise is required when the AI gets stuck.
+Now that AI is able to search for bricks and glue them together for you, what's left? Well, intent, direction, structure, domain knowledge. As confident as an AI might sound, you are the one with the project vision, you can make it follow your rules, architecture, style, and taste. And your expertise is required when the AI gets stuck.
 
 Examples: when creating the virtual hole, Claude (Sonnet 5 Extra, my current default) insisted on drawing the occluded using BackSide rendering. I knew it was wrong and after trying to convince the LLM that I was right, I modified the code myself, checked the result and told it to accept it with no further discussion.
 
 Another example: while I was trying to automate the whole code / run / test inside a simulator, Claude told me that it was impossible to test the code without a headset. I had to give it the URL of Meta's IWER as well as a direct link to the API exposed via MCP, to convince it that it was feasible.
 
-The rest is history: my engine has many automated tests that I would never have taken the time to design, but which were the most precious investment in terms of iterative design. 
+The rest is history: my engine has many automated tests that I would never have taken the time to design, but which are one of the most precious investments in terms of iterative design. 
 
 ## Loop engineering
 People are talking about **loop engineering**, this is an example of how you get there: design a system that can iterate autonomously by allowing to check automatically the result of any modification. No more AIs telling you: "run this code and let me know if works". I don't want to be a passive QA tester for AI slop. AI should be able to produce the best possible code given my design and specs. And it should be able to build metrics to test code validity if you haven't provided any, in order to close the loop.
 
-Beyond helping creating impressive build pipelines and testing rigs, AIs also excel at creating powerful tools like editors and debuggers. That's how I "vibe coded" (can't think of a better term here given the very low supervision and constraints involved in this specific case) tools like the unicorn editor, or the sound designer. They allow me to tweak parameters and explore design. They could have been coded in whatever language, have many dependencies, weigh megabytes of code, the result mattered most than the tool. I hope that you might find them useful. 
+Beyond helping creating impressive build pipelines and testing rigs, AIs also excel at creating powerful tools like editors and debuggers. That's how I "vibe coded" (can't think of a better term here given the very low supervision and constraints involved in this specific case) tools like the unicorn editor, or the sound designer (to be released soon!). They allow me to tweak parameters and explore design. They could have been coded in whatever language, have many dependencies, weigh megabytes of code, the result mattered most than the tool. I hope that you might find them useful. 
 
 These are more throwaway tools that just need to do the job, whatever the architecture. If you are mostly interested by the outcome you don't need to control the code as closely as you do for a game that fits in 13KB.
 
